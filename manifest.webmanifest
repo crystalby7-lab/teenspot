@@ -1,0 +1,16 @@
+{
+  "name": "TeenSpot",
+  "short_name": "TeenSpot",
+  "description": "어른 리뷰 말고, 또래가 직접 해본 것",
+  "start_url": "./index.html#/home",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1E2A3E",
+  "theme_color": "#1E2A3E",
+  "lang": "ko",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

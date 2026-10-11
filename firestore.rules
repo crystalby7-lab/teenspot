@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isMe(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function hasProfile() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function validStops(s) { return s is list && s.size() >= 2 && s.size() <= 8; }
+
+    // 관리자 목록: 콘솔에서만 추가
+    match /admins/{uid} {
+      allow read: if isMe(uid);
+      allow write: if false;
+    }
+
+    // 회원 정보: 본인만
+    match /users/{uid} {
+      allow read, delete: if isMe(uid);
+      allow create, update: if isMe(uid)
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() >= 2
+        && request.resource.data.nickname.size() <= 10
+        && request.resource.data.birthYear is int
+        && request.resource.data.agreements.terms == true
+        && request.resource.data.agreements.privacy == true
+        && request.resource.data.agreements.guide == true;
+
+      match /saves/{sid} {
+        allow read, write: if isMe(uid);
+      }
+    }
+
+    // 닉네임 중복 방지
+    match /nicknames/{nick} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && nick.size() >= 2 && nick.size() <= 10;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // 코스: 관리자만 등록·수정
+    match /courses/{cid} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+
+      // 후기: 1인 1개, 본인만 작성·수정·삭제 (관리자는 삭제 가능)
+      match /reviews/{uid} {
+        allow create, update: if hasProfile() && isMe(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.recommend is bool
+          && request.resource.data.spent is int
+          && request.resource.data.spent >= 0
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 100;
+        allow delete: if isMe(uid) || isAdmin();
+      }
+    }
+    match /{path=**}/reviews/{uid} {
+      allow read: if signedIn();
+    }
+
+    // 투표: 관리자만 등록, 1인 1표, 변경 불가
+    match /polls/{pid} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+
+      match /votes/{uid} {
+        allow read: if signedIn();
+        allow create: if hasProfile() && isMe(uid)
+          && request.resource.data.choice in ['a', 'b'];
+        allow delete: if isMe(uid);
+      }
+    }
+
+    // 코스 제보: 본인 작성, 관리자 승인
+    match /submissions/{sid} {
+      allow create: if hasProfile()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && validStops(request.resource.data.stops);
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // 신고: 누구나 작성, 관리자만 처리
+    match /reports/{rid} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'open';
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+  }
+}
