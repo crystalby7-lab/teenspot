@@ -42,7 +42,11 @@
     if (t !== token) return false;
     const p = parse().path;
     $app.innerHTML = html;
-    if (p !== S.lastPath) window.scrollTo(0, 0);
+    if (p !== S.lastPath) {
+      window.scrollTo(0, 0);
+      const first = $app.firstElementChild;
+      if (first) { first.classList.add("enter"); setTimeout(() => first.classList.remove("enter"), 320); }
+    }
     S.lastPath = p;
     if (bind) bind();
     hydrateImages($app);
@@ -66,11 +70,15 @@
       } catch (e) {}
     });
   }
-  const loadingHtml = () => `<div class="center-screen"><div class="spinner"></div></div>`;
+  const loadingHtml = () => `<div class="skeleton" aria-busy="true" aria-label="불러오는 중">
+      <div class="sk sk-title"></div>
+      ${[0, 1, 2].map(() => `<div class="sk-row"><div class="sk sk-thumb"></div><div class="grow"><div class="sk sk-line"></div><div class="sk sk-line short"></div></div></div>`).join("")}
+    </div>`;
+  const mascot = (mood, size, opts) => window.TSBrand.mascot(mood, size, opts);
   function errorHtml(e) {
     const offline = !navigator.onLine;
     return `<div class="center-screen">
-      <div class="state-icon">${ic(offline ? "offline" : "alert", 28)}</div>
+      ${mascot(offline ? "sleepy" : "wow", 84)}
       <h2>${offline ? "인터넷 연결이 끊겼어요" : "문제가 생겼어요"}</h2>
       <p class="muted">${offline ? "연결을 확인하고 다시 시도해주세요" : esc(e && e.message ? e.message : "잠시 후 다시 시도해주세요")}</p>
       <button class="btn" data-act="retry">다시 시도</button>
@@ -81,15 +89,19 @@
   }
   function header(title, opts) {
     opts = opts || {};
-    return `<header class="topbar">
-      ${opts.back ? `<button class="icon-btn" data-act="back" aria-label="뒤로">${ic("back", 24)}</button>` : `<span class="logo">${esc(title)}</span>`}
-      ${opts.back ? `<h1>${esc(title)}</h1>` : ""}
+    if (opts.back) return `<header class="topbar sub">
+      <button class="icon-btn" data-act="back" aria-label="뒤로">${ic("back", 24)}</button>
+      <h1>${esc(title)}</h1>
+      <div class="topbar-right">${opts.right || ""}</div>
+    </header>`;
+    return `<header class="topbar root">
+      ${opts.brand ? window.TSBrand.wordmark("wm-bar") : `<h1 class="title-lg">${esc(title)}</h1>`}
       <div class="topbar-right">${opts.right || ""}</div>
     </header>`;
   }
   function tabbar(active) {
-    const tabs = [["home", "home", "홈"], ["feed", "grid", "피드"], ["spot", "pin", "SPOT"], ["style", "shirt", "STYLE"], ["me", "user", "마이"]];
-    return `<nav class="tabbar">${tabs.map(([k, i, l]) => `<a href="#/${k}" class="${active === k ? "on" : ""}">${ic(i, 24)}<span>${l}</span></a>`).join("")}</nav>`;
+    const tabs = [["home", "home", "홈"], ["feed", "grid", "피드"], ["spot", "pin", "코스"], ["style", "shirt", "스타일"], ["me", "user", "마이"]];
+    return `<nav class="tabbar">${tabs.map(([k, i, l]) => `<a href="#/${k}" class="${active === k ? "on" : ""}" ${active === k ? 'aria-current="page"' : ""}><span class="tab-ic">${ic(i, 23)}</span><span>${l}</span></a>`).join("")}</nav>`;
   }
   const demoBadge = () => (S.store && S.store.mode === "demo" ? `<span class="badge-demo">체험 모드</span>` : "");
   function page(inner, tab, bar) { return `<div class="page ${tab ? "has-tab" : ""} ${bar ? "has-bar" : ""}">${inner}</div>${tab ? tabbar(tab) : ""}`; }
@@ -185,9 +197,9 @@
      1. 첫 실행
      ========================================================= */
   const ONBOARD = [
-    { icon: "map", title: "친구랑 어디 가지?", desc: "인원, 예산, 시간만 고르면\n또래가 직접 다녀온 코스를 보여줘요" },
-    { icon: "vote", title: "뭐가 더 어울릴까?", desc: "옷, 화장, 머리 고민을\n또래 투표로 결정해요" },
-    { icon: "shield", title: "안심하고 쓰는 공간", desc: "댓글 없이 선택만 해요\n위치는 구 단위까지만 공개돼요\n1:1 메시지가 없어요" }
+    { mood: "happy", chips: ["3명", "1만5천원", "4시간"], title: "친구랑 어디 가지?", desc: "인원, 예산, 시간만 고르면\n또래가 직접 다녀온 코스를 보여줘요" },
+    { mood: "wink", chips: ["와이드 데님", "vs", "카고 팬츠"], title: "뭐가 더 어울릴까?", desc: "옷, 화장, 머리 고민을\n또래 투표로 결정해요" },
+    { mood: "default", chips: ["댓글 없음", "구 단위 공개", "1:1 메시지 없음"], title: "안심하고 쓰는 공간", desc: "선택과 칭찬만 주고받아요\n올린 사진은 운영자가 확인한 뒤 공개돼요" }
   ];
   function screenOnboarding(t, i) {
     i = Math.max(0, Math.min(ONBOARD.length - 1, i));
@@ -195,7 +207,10 @@
     paint(t, `<div class="onboard">
       <div class="onboard-top"><button class="link" data-act="skip">건너뛰기</button></div>
       <div class="onboard-body">
-        <div class="onboard-icon">${ic(s.icon, 52)}</div>
+        <div class="onboard-art" data-slide="${i}">
+          ${s.chips.map((c, k) => `<span class="ob-chip c${k} ${c === "vs" ? "vs" : ""}">${esc(c)}</span>`).join("")}
+          ${mascot(s.mood, 132)}
+        </div>
         <h1>${esc(s.title)}</h1>
         <p>${esc(s.desc).replace(/\n/g, "<br>")}</p>
       </div>
@@ -244,7 +259,8 @@
   function screenLogin(t) {
     paint(t, `<div class="login">
       <div class="login-hero">
-        <h1 class="wordmark">TeenSpot</h1>
+        ${mascot("happy", 104, { inverse: true })}
+        <h1>${window.TSBrand.wordmark("wm-login")}</h1>
         <p>어른 리뷰 말고,<br>또래가 직접 해본 것</p>
         ${demoBadge()}
       </div>
@@ -300,7 +316,7 @@
   function screenBlocked(t, q) {
     const young = q.k !== "adult";
     paint(t, `<div class="center-screen">
-      <div class="state-icon">${ic(young ? "sprout" : "lock", 28)}</div>
+      ${mascot(young ? "wink" : "plain", 84)}
       <h2>${young ? "만 14세부터 가입할 수 있어요" : "TeenSpot은 10대 전용이에요"}</h2>
       <p class="muted">${young ? "조금만 기다렸다가 다시 만나요!" : "만 14~19세 청소년만 가입할 수 있어요"}</p>
       <button class="btn" data-act="out">처음으로</button>
@@ -430,16 +446,27 @@
   /* =========================================================
      3. 홈
      ========================================================= */
+  // 코스 썸네일: 장소 수만큼 점을 이은 작은 경로 그림
+  function routeThumb(n) {
+    n = Math.max(2, Math.min(6, n));
+    const pts = Array.from({ length: n }, (_, i) => [10 + (i * 36) / (n - 1), i % 2 ? 36 : 22]);
+    const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1]).join(" ");
+    const last = pts[n - 1];
+    return `<svg viewBox="0 0 56 56" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round" opacity=".55"/>
+      ${pts.slice(0, -1).map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1]}" r="3.4" fill="currentColor"/>`).join("")}
+      <path transform="translate(${(last[0] - 7).toFixed(1)} ${last[1] - 15}) scale(.14)" d="${window.TSBrand.PIN}" fill="currentColor"/></svg>`;
+  }
   function courseCard(c) {
-    return `<a class="card course-card" href="#/course/${encodeURIComponent(c.id)}">
-      <div class="cc-thumb"><b>${esc(c.area || c.gu.replace("구", ""))}</b><small>${c.stops.length}곳</small></div>
+    return `<a class="course-card" href="#/course/${encodeURIComponent(c.id)}">
+      <div class="cc-thumb">${routeThumb(c.stops.length)}<small>${esc(c.area || c.gu.replace("구", ""))}</small></div>
       <div class="cc-body">
         <h3>${esc(c.title)}</h3>
-        <p class="muted tiny">${esc(c.area || c.gu)} · ${c.peopleMin}~${c.peopleMax}명 · ${c.hours}시간</p>
-        <div class="cc-meta"><b>1인 ${won(c.total)}</b><span>추천 ${c.recCount}</span><span>후기 ${c.reviewCount}</span></div>
+        <div class="cc-sub"><span>${c.peopleMin}~${c.peopleMax}명</span><span>${c.hours}시간</span><span>${c.stops.length}곳</span></div>
+        <div class="cc-meta"><b class="num">${won(c.total)}</b><span class="per">1인</span><span class="cc-rec">추천 <em class="num">${c.recCount}</em></span></div>
       </div>
     </a>`;
   }
+  const courseList = arr => `<div class="group">${arr.map(courseCard).join("")}</div>`;
   function pollThumb(side, p) {
     const o = p[side];
     return o.img ? imgTag(o.img, o.label) : `<span>${esc(o.label)}</span>`;
@@ -453,7 +480,7 @@
   }
   const popular = arr => [...arr].sort((a, b) => b.recCount - a.recCount || b.reviewCount - a.reviewCount || (b.createdAt || 0) - (a.createdAt || 0));
   async function screenHome(t) {
-    paint(t, page(header("TeenSpot") + loadingHtml(), "home"));
+    paint(t, page(header("", { brand: true }) + loadingHtml(), "home"));
     const [courses, polls, votes, feed] = await Promise.all([S.store.listCourses(), S.store.listPolls(), S.store.myVotes(), S.store.listFeed()]);
     const gu = S.profile.gu;
     const strip = feed.slice(0, 8);
@@ -461,26 +488,38 @@
     if (!local.length) { local = courses.filter(c => c.gu === LAUNCH_GU); fallback = true; }
     const top = popular(local).slice(0, 3);
     const nextPoll = polls.find(p => !votes[p.id]);
+    const f = S.spotFilter || (S.spotFilter = { people: 3, budget: 15000, hours: 4, gu });
+    const budgetLabel = (BUDGETS.find(b => b[0] === f.budget) || [0, "예산 자유"])[1];
+    const findHref = `#/spot/list?people=${f.people}&budget=${f.budget}&hours=${f.hours}&gu=${encodeURIComponent(f.gu)}`;
     paint(t, page(`
-      ${header("TeenSpot", { right: `${demoBadge()}<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>` })}
-      <section class="hero card navy">
-        <p class="tiny">${esc(S.profile.nickname)}님, 이번 주말엔</p>
-        <h2>친구랑 어디 갈까?</h2>
-        <a class="btn light" href="#/spot">코스 찾기</a>
+      ${header("", { brand: true, right: `${demoBadge()}<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>` })}
+      <section class="hero">
+        <div class="hero-text">
+          <p>${esc(S.profile.nickname)}님, 이번 주말엔</p>
+          <h2>친구랑<br>어디 갈까?</h2>
+        </div>
+        <div class="hero-mascot">${mascot("happy", 86, { inverse: true })}</div>
+        <a class="hero-cond" href="#/spot" aria-label="조건 바꾸기">
+          <span><small>인원</small><b class="num">${f.people}명</b></span>
+          <span><small>1인 예산</small><b class="num">${budgetLabel === "상관없음" ? "자유" : budgetLabel}</b></span>
+          <span><small>시간</small><b class="num">${f.hours ? f.hours + "시간" : "자유"}</b></span>
+          ${ic("edit", 16, "hc-edit")}
+        </a>
+        <a class="btn light block lg" href="${findHref}">이 조건으로 코스 찾기</a>
       </section>
       <section>
-        <div class="sec-head"><h2>오늘의 투표</h2><a href="#/style" class="link">더보기</a></div>
+        <div class="sec-head"><h2>오늘의 투표</h2><a href="#/style" class="more-link">더보기${ic("chev", 14)}</a></div>
         ${nextPoll ? pollCard(nextPoll, false) : emptyHtml("checkCircle", "모든 투표에 참여했어요", "새 투표가 올라오면 알려드릴게요", `<a class="btn ghost sm" href="#/style/history">내 선택 보기</a>`)}
       </section>
       <section>
-        <div class="sec-head"><h2>새 피드</h2><a href="#/feed" class="link">전체</a></div>
+        <div class="sec-head"><h2>새 피드</h2><a href="#/feed" class="more-link">전체${ic("chev", 14)}</a></div>
         ${strip.length ? `<div class="strip">${strip.map(p => `<a class="strip-item" href="#/post/${encodeURIComponent(p.id)}">${imgTag(postThumbRef(p), postTitle(p))}<span>${esc(postTitle(p))}</span></a>`).join("")}</div>`
           : emptyHtml("image", "아직 게시물이 없어요", "", `<a class="btn sm" href="#/feed">피드 가기</a>`)}
       </section>
       <section>
-        <div class="sec-head"><h2>지금 뜨는 코스</h2><a href="#/spot/list" class="link">전체</a></div>
+        <div class="sec-head"><h2>지금 뜨는 코스</h2><a href="#/spot/list" class="more-link">전체${ic("chev", 14)}</a></div>
         ${fallback ? `<p class="hint">${esc(gu)} 코스는 준비 중이에요. ${esc(LAUNCH_GU)} 코스를 먼저 보여드려요</p>` : ""}
-        ${top.length ? top.map(courseCard).join("") : emptyHtml("map", "아직 코스가 없어요", "첫 코스를 제보해주세요")}
+        ${top.length ? courseList(top) : emptyHtml("map", "아직 코스가 없어요", "첫 코스를 제보해주세요")}
       </section>
       <a class="cta-card" href="#/submit"><span class="cta-ic">${ic("send", 20)}</span><div><b>나만 아는 코스가 있어요</b><p class="muted tiny">제보하면 승인 후 모두에게 보여져요</p></div>${ic("chev", 18, "chev")}</a>
     `, "home"));
@@ -494,7 +533,7 @@
   function screenSpot(t) {
     const f = S.spotFilter || (S.spotFilter = { people: 3, budget: 15000, hours: 4, gu: S.profile.gu });
     paint(t, page(`
-      ${header("SPOT")}
+      ${header("코스")}
       <h1 class="step-title">오늘 친구랑 어디 갈까?</h1>
       <div class="card form-card">
         <div class="field"><span>인원</span>
@@ -531,7 +570,7 @@
       ${header(title, { back: true })}
       ${cond}
       <div class="seg"><a href="${link("rec")}" class="${sort === "rec" ? "on" : ""}">추천순</a><a href="${link("cheap")}" class="${sort === "cheap" ? "on" : ""}">저렴한 순</a></div>
-      ${list.length ? `<p class="muted tiny">${list.length}개 코스</p>` + list.map(courseCard).join("")
+      ${list.length ? `<p class="list-count">코스 <b class="num">${list.length}</b>개</p>` + courseList(list)
         : emptyHtml("search", "조건에 맞는 코스가 없어요", "예산이나 시간을 조금 늘려보거나, 알고 있는 코스를 제보해주세요",
           `<div class="row gap center"><a class="btn ghost sm" href="#/spot">조건 바꾸기</a><a class="btn sm" href="#/submit">코스 제보</a></div>`)}
     `, "spot"));
@@ -540,7 +579,7 @@
     paint(t, page(header("코스", { back: true }) + loadingHtml()));
     const [c, reviews, mine, saves, feed] = await Promise.all([S.store.getCourse(id), S.store.listReviews(id), S.store.myReview(id), S.store.getSaves(), S.store.listFeed()]);
     const photos = feed.filter(p => p.type === "review" && p.courseId === id);
-    if (!c) return paint(t, page(header("코스", { back: true }) + emptyHtml("alert", "코스를 찾을 수 없어요", "삭제됐거나 주소가 잘못됐어요", `<a class="btn sm" href="#/spot">SPOT으로</a>`)));
+    if (!c) return paint(t, page(header("코스", { back: true }) + emptyHtml("alert", "코스를 찾을 수 없어요", "삭제됐거나 주소가 잘못됐어요", `<a class="btn sm" href="#/spot">코스 찾기로</a>`)));
     let saved = saves.some(s => s.type === "course" && s.id === id);
     const recRate = pct(c.recCount, c.reviewCount);
     paint(t, page(`
@@ -693,7 +732,7 @@
     });
   }
   function screenSubmitDone(t) {
-    paint(t, `<div class="center-screen"><div class="state-icon">${ic("checkCircle", 28)}</div><h2>제보가 접수됐어요</h2><p class="muted">운영자 확인 후 공개되면 마이 > 내 제보에서 확인할 수 있어요</p>
+    paint(t, `<div class="center-screen">${mascot("happy", 92)}<h2>제보가 접수됐어요</h2><p class="muted">운영자 확인 후 공개되면 마이 > 내 제보에서 확인할 수 있어요</p>
       <div class="row gap center"><a class="btn ghost" href="#/me">내 제보 보기</a><a class="btn" href="#/home">홈으로</a></div></div>`);
   }
 
@@ -702,12 +741,12 @@
      ========================================================= */
   async function screenStyle(t, q) {
     const cat = q.cat || "all";
-    paint(t, page(header("STYLE") + loadingHtml(), "style"));
+    paint(t, page(header("스타일") + loadingHtml(), "style"));
     const [polls, votes] = await Promise.all([S.store.listPolls(), S.store.myVotes()]);
     const list = polls.filter(p => cat === "all" || p.cat === cat);
     list.sort((a, b) => (votes[a.id] ? 1 : 0) - (votes[b.id] ? 1 : 0));
     paint(t, page(`
-      ${header("STYLE", { right: `<a class="link" href="#/style/history">내 선택</a>` })}
+      ${header("스타일", { right: `<a class="link" href="#/style/history">내 선택</a>` })}
       <p class="muted">사람이 아니라 선택지를 골라요. 결과는 투표 후에 볼 수 있어요</p>
       <div class="seg">${[["all", "전체"], ...Object.entries(CATS)].map(([k, l]) => `<a href="#/style?cat=${k}" class="${cat === k ? "on" : ""}">${l}</a>`).join("")}</div>
       ${list.length ? list.map(p => pollCard(p, !!votes[p.id])).join("") : emptyHtml("vote", "아직 투표가 없어요", "곧 새 투표가 올라와요")}
@@ -717,7 +756,7 @@
     paint(t, page(header("투표", { back: true }) + loadingHtml(), "style"));
     const [polls, votes, saves] = await Promise.all([S.store.listPolls(), S.store.myVotes(), S.store.getSaves()]);
     const p = polls.find(x => x.id === id);
-    if (!p) return paint(t, page(header("투표", { back: true }) + emptyHtml("alert", "투표를 찾을 수 없어요", "", `<a class="btn sm" href="#/style">STYLE로</a>`), "style"));
+    if (!p) return paint(t, page(header("투표", { back: true }) + emptyHtml("alert", "투표를 찾을 수 없어요", "", `<a class="btn sm" href="#/style">스타일로</a>`), "style"));
     let saved = saves.some(s => s.type === "poll" && s.id === id);
     const mine = votes[id];
     const next = polls.find(x => x.id !== id && !votes[x.id]);
@@ -764,7 +803,7 @@
         <p class="center muted">또래 <b>${total.toLocaleString("ko-KR")}명</b>이 투표했어요</p>
         <p class="center">${win === null ? "의견이 딱 반반이에요" : win === mine ? "다수와 같은 선택이에요" : "소수의 취향을 골랐어요"}</p>
       </div>
-      ${next ? `<a class="btn block lg" href="#/poll/${encodeURIComponent(next.id)}">다음 투표</a>` : `<a class="btn block lg" href="#/style">STYLE로 돌아가기</a>`}
+      ${next ? `<a class="btn block lg" href="#/poll/${encodeURIComponent(next.id)}">다음 투표</a>` : `<a class="btn block lg" href="#/style">스타일로 돌아가기</a>`}
     `, "style"), bindCommon);
   }
   async function screenStyleHistory(t) {
@@ -1028,7 +1067,7 @@
     });
   }
   function screenPostDone(t) {
-    paint(t, `<div class="center-screen"><div class="state-icon">${ic("checkCircle", 28)}</div><h2>게시물을 올렸어요</h2><p class="muted">운영자 확인 후 피드에 공개돼요<br>마이에서 진행 상황을 볼 수 있어요</p>
+    paint(t, `<div class="center-screen">${mascot("happy", 92)}<h2>게시물을 올렸어요</h2><p class="muted">운영자 확인 후 피드에 공개돼요<br>마이에서 진행 상황을 볼 수 있어요</p>
       <div class="row gap center"><a class="btn ghost" href="#/me">내 게시물 보기</a><a class="btn" href="#/feed">피드로</a></div></div>`);
   }
 
@@ -1161,7 +1200,7 @@
     const items = ids.map(i => src.find(c => c.id === i)).filter(Boolean);
     const empty = { course: ["저장한 코스가 없어요", "spot"], poll: ["저장한 투표가 없어요", "style"], post: ["저장한 게시물이 없어요", "feed"] }[tab];
     const list = !items.length ? emptyHtml("bookmark", empty[0], "마음에 드는 걸 저장해두면 여기 모여요", `<a class="btn sm" href="#/${empty[1]}">둘러보기</a>`)
-      : tab === "course" ? items.map(courseCard).join("")
+      : tab === "course" ? courseList(items)
       : tab === "poll" ? items.map(p => pollCard(p, !!votes[p.id])).join("")
       : `<div class="thumb-grid">${items.map(p => `<a href="#/post/${encodeURIComponent(p.id)}">${imgTag(postThumbRef(p), postTitle(p))}</a>`).join("")}</div>`;
     paint(t, page(`

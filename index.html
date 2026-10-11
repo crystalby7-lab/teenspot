@@ -12,11 +12,14 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sunn-us/SUIT/fonts/static/woff2/SUIT.css">
+  <link rel="preload" href="fonts/SUIT-Variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/fredoka-700.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="splash"><b class="wordmark">TeenSpot</b></div>
+  <div id="splash">
+    <svg class="splash-pin" width="88" height="97" viewBox="0 0 100 110" aria-hidden="true"><path d="M50 8C29.6 8 14 23.4 14 43.2c0 21.5 23.7 41 33.6 48.6a4 4 0 0 0 4.8 0C62.3 84.2 86 64.7 86 43.2 86 23.4 70.4 8 50 8z" fill="#fff"/><ellipse cx="38.5" cy="42" rx="4.6" ry="5.6" fill="#1E2A3E"/><ellipse cx="61.5" cy="42" rx="4.6" ry="5.6" fill="#1E2A3E"/><path d="M42 54q8 7 16 0" stroke="#1E2A3E" stroke-width="4" fill="none" stroke-linecap="round"/></svg>
+  </div>
   <div id="net">인터넷 연결이 끊겼어요</div>
   <main id="app"></main>
   <div id="modal-root"></div>
@@ -27,6 +30,7 @@
   <script src="js/seed.js"></script>
   <script src="js/style-images.js"></script>
   <script src="js/icons.js"></script>
+  <script src="js/brand.js"></script>
   <script src="js/media.js"></script>
   <script src="js/avatar.js"></script>
   <script src="js/store.js"></script>
