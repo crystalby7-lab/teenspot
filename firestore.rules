@@ -60,17 +60,55 @@ service cloud.firestore {
       allow read: if signedIn();
     }
 
-    // 투표: 관리자만 등록, 1인 1표, 변경 불가
+    // 투표: 관리자가 등록(유저 투표는 승인 시 관리자가 생성), 1인 1표, 변경 불가
     match /polls/{pid} {
       allow read: if signedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
 
       match /votes/{uid} {
         allow read: if signedIn();
         allow create: if hasProfile() && isMe(uid)
           && request.resource.data.choice in ['a', 'b'];
-        allow delete: if isMe(uid);
+        allow delete: if isMe(uid) || isAdmin()
+          || get(/databases/$(database)/documents/polls/$(pid)).data.uid == request.auth.uid;
       }
+    }
+
+    // 사진: 압축된 이미지 데이터 (1MB 미만)
+    match /images/{iid} {
+      allow read: if signedIn();
+      allow create: if hasProfile()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 900000
+        && request.resource.data.data.matches('^data:image/jpeg;base64,.*');
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // 피드 게시물: 작성 시 검토 중, 관리자 승인 후 공개
+    match /posts/{pid} {
+      allow read: if signedIn() && (resource.data.status == 'approved'
+        || resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if hasProfile()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.type in ['vote', 'review']
+        && request.resource.data.text.size() <= 100;
+      allow update: if isAdmin();
+      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+
+      // 좋아요·칭찬: 1인 1개, 본인 것만
+      match /reactions/{uid} {
+        allow create, update: if hasProfile() && isMe(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.like is bool;
+        allow delete: if isMe(uid) || isAdmin()
+          || get(/databases/$(database)/documents/posts/$(pid)).data.uid == request.auth.uid;
+      }
+    }
+    match /{path=**}/reactions/{uid} {
+      allow read: if signedIn();
     }
 
     // 코스 제보: 본인 작성, 관리자 승인

@@ -1,6 +1,6 @@
 # TeenSpot MVP
 
-어른 리뷰 말고, 또래가 직접 해본 것. 10대 라이프스타일 커뮤니티 (SPOT + STYLE)
+어른 리뷰 말고, 또래가 직접 해본 것. 10대 라이프스타일 커뮤니티 (피드 + SPOT + STYLE)
 
 - 바닐라 JS + Firebase(구글 로그인, Firestore) + GitHub Pages
 - `js/config.js`의 firebase 값이 비어 있으면 **체험 모드** (이 기기에만 저장, 누구나 관리자)
@@ -12,6 +12,8 @@ index.html              앱 셸
 css/style.css           디자인 (메인 #1E2A3E 네이비, SUIT 폰트)
 js/config.js            Firebase 설정, 문의 이메일, 시작 지역
 js/store.js             데이터 계층 (체험 모드 / Firebase)
+js/media.js             사진 압축 (비율 자르기, JPEG 재저장, 위치 정보 제거)
+js/icons.js             선 아이콘
 js/app.js               화면 31개, 라우터
 js/seed.js              서대문구 예시 코스 8개, 투표 9개
 js/legal.js             약관 초안 4종
@@ -45,3 +47,10 @@ manifest.webmanifest    홈 화면 추가용
 - `js/legal.js` 약관 검토
 - `js/config.js` 문의 이메일 변경
 - 예시 코스 가격·정보를 직접 다녀온 내용으로 교체
+
+## 피드 사진 저장 방식
+
+- Firebase Storage는 유료 요금제가 필요해서, 사진을 폰에서 압축한 뒤 Firestore `images` 컬렉션에 저장해요 (장당 약 200KB 이하)
+- 게시물은 `posts` 컬렉션에 `pending`으로 저장되고, 관리자 승인 후 `approved`로 피드에 공개돼요
+- 투표 게시물은 승인 시 `polls`에도 같은 ID로 만들어져 STYLE 탭에 함께 나와요
+- `firestore.rules`가 바뀌면 Firebase 콘솔 규칙 탭에 다시 붙여넣고 게시해야 해요

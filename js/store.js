@@ -13,6 +13,27 @@
     const total = (course.stops || []).reduce((s, x) => s + (Number(x.cost) || 0), 0);
     return { ...course, total, reviewCount: rs.length, recCount: rec, avgSpent: spent };
   }
+  function cleanPost(p) {
+    const out = { type: p.type === "vote" ? "vote" : "review", text: String(p.text || "").slice(0, 100) };
+    if (out.type === "vote") {
+      out.cat = p.cat; out.question = String(p.question || "").slice(0, 30);
+      out.a = { label: String(p.a.label || "").slice(0, 15), img: p.a.img };
+      out.b = { label: String(p.b.label || "").slice(0, 15), img: p.b.img };
+    } else {
+      out.courseId = p.courseId; out.courseTitle = p.courseTitle || "";
+      out.images = (p.images || []).slice(0, 4);
+    }
+    return out;
+  }
+  function withReactions(p, rs, uid) {
+    const arr = rs || [], praise = {};
+    arr.forEach(r => { if (r.praise) praise[r.praise] = (praise[r.praise] || 0) + 1; });
+    const mine = arr.find(r => r.uid === uid) || null;
+    return { ...p, likes: arr.filter(r => r.like).length, praise, myLike: !!(mine && mine.like), myPraise: mine ? mine.praise || null : null };
+  }
+  const postImageRefs = p => (p.type === "vote" ? [p.a && p.a.img, p.b && p.b.img] : p.images || []).filter(r => typeof r === "string" && r.indexOf("img:") === 0).map(r => r.slice(4));
+  const byNewest = (a, b) => (b.approvedAt || b.createdAt || 0) - (a.approvedAt || a.createdAt || 0);
+
   function cleanCourse(c) {
     return {
       title: c.title, gu: c.gu, area: c.area || "",
@@ -32,15 +53,21 @@
       const courses = {}, polls = {};
       SEED.courses.forEach(c => { courses[c.id] = { ...cleanCourse(c), id: c.id, createdAt: now() }; });
       SEED.polls.forEach((p, i) => { polls[p.id] = { ...p, createdAt: now() - i }; });
-      return { authUid: null, users: {}, nicknames: {}, courses, reviews: {}, polls, votes: {}, saves: {}, submissions: {}, reports: {} };
+      return { authUid: null, users: {}, nicknames: {}, courses, reviews: {}, polls, votes: {}, saves: {}, submissions: {}, reports: {}, images: {}, posts: seedPosts(), reactions: {} };
+    }
+    function seedPosts() {
+      const posts = {};
+      (SEED.posts || []).forEach((p, i) => { posts[p.id] = { ...p, status: "approved", pollId: p.type === "vote" ? p.id : null, createdAt: now() - (i + 1) * 3600e3, approvedAt: now() - (i + 1) * 3600e3 }; });
+      return posts;
     }
     function db() {
       if (d) return d;
       try { const raw = localStorage.getItem(KEY); if (raw) d = JSON.parse(raw); } catch (e) {}
       if (!d) d = fresh();
+      if (!d.posts) { d.posts = seedPosts(); d.images = d.images || {}; d.reactions = d.reactions || {}; SEED.polls.forEach(p => { if (d.polls[p.id]) d.polls[p.id] = { ...d.polls[p.id], a: p.a, b: p.b }; }); }
       return d;
     }
-    function save() { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
+    function save() { try { localStorage.setItem(KEY, JSON.stringify(d)); return true; } catch (e) { return false; } }
     const user = () => (db().authUid ? { uid: db().authUid, email: "demo@teenspot.app" } : null);
     const me = () => db().authUid;
     function emit() { listeners.forEach(f => f(user())); }
@@ -111,11 +138,50 @@
         Object.keys(D.submissions).forEach(k => { if (D.submissions[k].uid === u) delete D.submissions[k]; });
         Object.keys(D.reports).forEach(k => { if (D.reports[k].uid === u) delete D.reports[k]; });
         Object.keys(D.nicknames).forEach(k => { if (D.nicknames[k] === u) delete D.nicknames[k]; });
+        Object.values(D.posts).filter(p => p.uid === u).forEach(p => { postImageRefs(p).forEach(k => delete D.images[k]); if (p.pollId) { delete D.polls[p.pollId]; delete D.votes[p.pollId]; } delete D.reactions[p.id]; delete D.posts[p.id]; });
+        Object.keys(D.images).forEach(k => { if (D.images[k].uid === u) delete D.images[k]; });
+        Object.values(D.reactions).forEach(m => delete m[u]);
         delete D.saves[u]; delete D.users[u];
         D.authUid = null; save(); emit();
       },
       async resetDemo() { d = fresh(); save(); emit(); },
+      // 피드
+      async uploadImage(dataUrl) {
+        const id = rid(); db().images[id] = { data: dataUrl, uid: me() };
+        if (!save()) { delete db().images[id]; throw new Error("체험 모드 저장 공간이 가득 찼어요. 설정에서 체험 데이터를 초기화해주세요"); }
+        return "img:" + id;
+      },
+      async getImage(id) { const x = db().images[id]; return x ? x.data : ""; },
+      async createPost(p) {
+        const id = rid();
+        db().posts[id] = { ...cleanPost(p), id, uid: me(), nickname: db().users[me()].nickname, status: "pending", createdAt: now() };
+        save(); return id;
+      },
+      async listFeed() {
+        const R = db().reactions;
+        return Object.values(db().posts).filter(p => p.status === "approved").map(p => withReactions(p, Object.values(R[p.id] || {}), me())).sort(byNewest);
+      },
+      async myPosts() { return Object.values(db().posts).filter(p => p.uid === me()).sort((a, b) => b.createdAt - a.createdAt); },
+      async react(pid, r) {
+        const R = db().reactions; R[pid] = R[pid] || {};
+        const cur = R[pid][me()] || { like: false, praise: null };
+        R[pid][me()] = { ...cur, ...r, uid: me(), at: now() }; save();
+      },
+      async deletePost(id) {
+        const D = db(), p = D.posts[id]; if (!p) return;
+        postImageRefs(p).forEach(k => delete D.images[k]);
+        if (p.pollId) { delete D.polls[p.pollId]; delete D.votes[p.pollId]; }
+        delete D.reactions[id]; delete D.posts[id]; save();
+      },
+
       // 관리자 (체험 모드에서는 누구나 관리자)
+      async listPosts() { return Object.values(db().posts).sort((a, b) => b.createdAt - a.createdAt); },
+      async approvePost(id) {
+        const D = db(), p = D.posts[id]; if (!p) return;
+        if (p.type === "vote") { D.polls[id] = { id, cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now() }; p.pollId = id; }
+        p.status = "approved"; p.approvedAt = now(); save();
+      },
+      async rejectPost(id) { const p = db().posts[id]; if (p) { p.status = "rejected"; save(); } },
       async isAdmin() { return true; },
       async listSubmissions() { return Object.values(db().submissions).sort((a, b) => b.createdAt - a.createdAt); },
       async approveSubmission(id) {
@@ -135,7 +201,7 @@
       async deletePoll(id) { delete db().polls[id]; delete db().votes[id]; save(); },
       async listReports() { return Object.values(db().reports).sort((a, b) => b.createdAt - a.createdAt); },
       async resolveReport(id) { if (db().reports[id]) { db().reports[id].status = "done"; save(); } },
-      async importSeed() { const f = fresh(); Object.assign(db().courses, f.courses); Object.assign(db().polls, f.polls); save(); }
+      async importSeed() { const f = fresh(); Object.assign(db().courses, f.courses); Object.assign(db().polls, f.polls); Object.assign(db().posts, f.posts); save(); }
     };
   }
 
@@ -163,6 +229,28 @@
       reviewCache = m; return m;
     }
     const dirty = () => { reviewCache = null; };
+    let rxCache = null;
+    async function allReactions() {
+      if (rxCache) return rxCache;
+      const snap = await getDocs(collectionGroup(fs, "reactions"));
+      const m = {};
+      snap.docs.forEach(x => { const pid = x.ref.parent.parent.id; (m[pid] = m[pid] || []).push(x.data()); });
+      rxCache = m; return m;
+    }
+    async function removePost(id) {
+      const s = await getDoc(doc(fs, "posts", id)); if (!s.exists()) return;
+      const p = s.data();
+      const rx = await getDocs(collection(fs, "posts", id, "reactions"));
+      await Promise.all(rx.docs.map(x => deleteDoc(x.ref)));
+      if (p.pollId) {
+        const vs = await getDocs(collection(fs, "polls", p.pollId, "votes"));
+        await Promise.all(vs.docs.map(x => deleteDoc(x.ref)));
+        await deleteDoc(doc(fs, "polls", p.pollId));
+      }
+      await Promise.all(postImageRefs(p).map(k => deleteDoc(doc(fs, "images", k)).catch(() => {})));
+      await deleteDoc(doc(fs, "posts", id));
+      rxCache = null;
+    }
 
     return {
       mode: "firebase",
@@ -247,11 +335,47 @@
         polls.docs.forEach(x => jobs.push(deleteDoc(doc(fs, "polls", x.id, "votes", uid))));
         subs.docs.concat(reps.docs, saves.docs).forEach(x => jobs.push(deleteDoc(x.ref)));
         await Promise.all(jobs);
+        const [myPosts, approved, myImgs] = await Promise.all([
+          getDocs(query(collection(fs, "posts"), where("uid", "==", uid))),
+          getDocs(query(collection(fs, "posts"), where("status", "==", "approved"))),
+          getDocs(query(collection(fs, "images"), where("uid", "==", uid)))
+        ]);
+        for (const x of myPosts.docs) await removePost(x.id);
+        await Promise.all(approved.docs.map(x => deleteDoc(doc(fs, "posts", x.id, "reactions", uid)).catch(() => {})));
+        await Promise.all(myImgs.docs.map(x => deleteDoc(x.ref).catch(() => {})));
         if (p && p.nickname) { try { await deleteDoc(doc(fs, "nicknames", p.nickname)); } catch (e) {} }
         await deleteDoc(doc(fs, "users", uid));
         await A.deleteUser(user);
         dirty();
       },
+      async uploadImage(dataUrl) { const r = await addDoc(collection(fs, "images"), { data: dataUrl, uid: me(), createdAt: now() }); return "img:" + r.id; },
+      async getImage(id) { const s = await getDoc(doc(fs, "images", id)); return s.exists() ? s.data().data : ""; },
+      async createPost(p) {
+        const prof = await this.getProfile();
+        const r = await addDoc(collection(fs, "posts"), { ...cleanPost(p), uid: me(), nickname: prof.nickname, status: "pending", createdAt: now() });
+        return r.id;
+      },
+      async listFeed() {
+        const [snap, rx] = await Promise.all([getDocs(query(collection(fs, "posts"), where("status", "==", "approved"))), allReactions()]);
+        return list(snap).map(p => withReactions(p, rx[p.id], me())).sort(byNewest);
+      },
+      async myPosts() { return list(await getDocs(query(collection(fs, "posts"), where("uid", "==", me())))).sort((a, b) => b.createdAt - a.createdAt); },
+      async react(pid, r) {
+        const ref = doc(fs, "posts", pid, "reactions", me());
+        const s = await getDoc(ref);
+        const cur = s.exists() ? s.data() : { like: false, praise: null };
+        await setDoc(ref, { like: !!cur.like, praise: cur.praise || null, ...r, uid: me(), at: now() });
+        rxCache = null;
+      },
+      async deletePost(id) { await removePost(id); },
+      async listPosts() { return list(await getDocs(collection(fs, "posts"))).sort((a, b) => b.createdAt - a.createdAt); },
+      async approvePost(id) {
+        const s = await getDoc(doc(fs, "posts", id)); if (!s.exists()) return;
+        const p = s.data();
+        if (p.type === "vote") await setDoc(doc(fs, "polls", id), { cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now() });
+        await updateDoc(doc(fs, "posts", id), { status: "approved", pollId: p.type === "vote" ? id : null, approvedAt: now() });
+      },
+      async rejectPost(id) { await updateDoc(doc(fs, "posts", id), { status: "rejected" }); },
       async isAdmin() { try { return (await getDoc(doc(fs, "admins", me()))).exists(); } catch (e) { return false; } },
       async listSubmissions() { return list(await getDocs(collection(fs, "submissions"))).sort((a, b) => b.createdAt - a.createdAt); },
       async approveSubmission(id) {
@@ -286,6 +410,7 @@
         const t = now();
         await Promise.all(SEED.courses.map(c => setDoc(doc(fs, "courses", c.id), { ...cleanCourse(c), createdAt: t })));
         await Promise.all(SEED.polls.map((p, i) => setDoc(doc(fs, "polls", p.id), { cat: p.cat, question: p.question, a: p.a, b: p.b, createdAt: t - i })));
+        await Promise.all((SEED.posts || []).map((p, i) => setDoc(doc(fs, "posts", p.id), { ...p, status: "approved", pollId: p.type === "vote" ? p.id : null, createdAt: t - (i + 1) * 3600e3, approvedAt: t - (i + 1) * 3600e3 })));
       }
     };
   }
