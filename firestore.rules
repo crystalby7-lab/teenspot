@@ -31,6 +31,21 @@ service cloud.firestore {
       }
     }
 
+    // 공개 프로필: 다른 사람에게 보이는 정보만 (닉네임, 아바타, 나이, 태그)
+    match /publicProfiles/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isMe(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly(['uid', 'nickname', 'birthYear', 'birthMonth', 'avatar', 'styleTags', 'playTags', 'personalColor', 'updatedAt'])
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() >= 2
+        && request.resource.data.nickname.size() <= 10
+        && (!('styleTags' in request.resource.data) || request.resource.data.styleTags.size() <= 3)
+        && (!('playTags' in request.resource.data) || request.resource.data.playTags.size() <= 3);
+      allow delete: if isMe(uid);
+      allow write: if isAdmin();
+    }
+
     // 닉네임 중복 방지
     match /nicknames/{nick} {
       allow read: if signedIn();

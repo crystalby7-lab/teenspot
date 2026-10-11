@@ -34,6 +34,18 @@
   const postImageRefs = p => (p.type === "vote" ? [p.a && p.a.img, p.b && p.b.img] : p.images || []).filter(r => typeof r === "string" && r.indexOf("img:") === 0).map(r => r.slice(4));
   const byNewest = (a, b) => (b.approvedAt || b.createdAt || 0) - (a.approvedAt || a.createdAt || 0);
 
+  function cleanPublic(p) {
+    const out = {};
+    if (p.nickname != null) out.nickname = String(p.nickname).slice(0, 10);
+    if (p.birthYear != null) out.birthYear = Number(p.birthYear);
+    if (p.birthMonth != null) out.birthMonth = Number(p.birthMonth);
+    if (p.avatar) out.avatar = p.avatar;
+    if (p.styleTags) out.styleTags = p.styleTags.slice(0, 3);
+    if (p.playTags) out.playTags = p.playTags.slice(0, 3);
+    if (p.personalColor != null) out.personalColor = p.personalColor;
+    return out;
+  }
+
   function cleanCourse(c) {
     return {
       title: c.title, gu: c.gu, area: c.area || "",
@@ -53,8 +65,9 @@
       const courses = {}, polls = {};
       SEED.courses.forEach(c => { courses[c.id] = { ...cleanCourse(c), id: c.id, createdAt: now() }; });
       SEED.polls.forEach((p, i) => { polls[p.id] = { ...p, createdAt: now() - i }; });
-      return { authUid: null, users: {}, nicknames: {}, courses, reviews: {}, polls, votes: {}, saves: {}, submissions: {}, reports: {}, images: {}, posts: seedPosts(), reactions: {} };
+      return { authUid: null, users: {}, nicknames: {}, courses, reviews: {}, polls, votes: {}, saves: {}, submissions: {}, reports: {}, images: {}, posts: seedPosts(), reactions: {}, publics: seedPublics() };
     }
+    function seedPublics() { return JSON.parse(JSON.stringify(SEED.publicProfiles || {})); }
     function seedPosts() {
       const posts = {};
       (SEED.posts || []).forEach((p, i) => { posts[p.id] = { ...p, status: "approved", pollId: p.type === "vote" ? p.id : null, createdAt: now() - (i + 1) * 3600e3, approvedAt: now() - (i + 1) * 3600e3 }; });
@@ -64,6 +77,7 @@
       if (d) return d;
       try { const raw = localStorage.getItem(KEY); if (raw) d = JSON.parse(raw); } catch (e) {}
       if (!d) d = fresh();
+      if (!d.publics) d.publics = seedPublics();
       if (!d.posts) { d.posts = seedPosts(); d.images = d.images || {}; d.reactions = d.reactions || {}; SEED.polls.forEach(p => { if (d.polls[p.id]) d.polls[p.id] = { ...d.polls[p.id], a: p.a, b: p.b }; }); }
       return d;
     }
@@ -141,10 +155,15 @@
         Object.values(D.posts).filter(p => p.uid === u).forEach(p => { postImageRefs(p).forEach(k => delete D.images[k]); if (p.pollId) { delete D.polls[p.pollId]; delete D.votes[p.pollId]; } delete D.reactions[p.id]; delete D.posts[p.id]; });
         Object.keys(D.images).forEach(k => { if (D.images[k].uid === u) delete D.images[k]; });
         Object.values(D.reactions).forEach(m => delete m[u]);
-        delete D.saves[u]; delete D.users[u];
+        delete D.saves[u]; delete D.users[u]; delete D.publics[u];
         D.authUid = null; save(); emit();
       },
       async resetDemo() { d = fresh(); save(); emit(); },
+      // 공개 프로필
+      async getPublicProfile(uid) { return db().publics[uid || me()] || null; },
+      async getPublicProfiles(uids) { const o = {}; uids.forEach(u => { if (db().publics[u]) o[u] = db().publics[u]; }); return o; },
+      async savePublicProfile(p) { db().publics[me()] = { ...(db().publics[me()] || {}), ...cleanPublic(p), uid: me(), updatedAt: now() }; save(); },
+
       // 피드
       async uploadImage(dataUrl) {
         const id = rid(); db().images[id] = { data: dataUrl, uid: me() };
@@ -230,6 +249,7 @@
     }
     const dirty = () => { reviewCache = null; };
     let rxCache = null;
+    const pubCache = {};
     async function allReactions() {
       if (rxCache) return rxCache;
       const snap = await getDocs(collectionGroup(fs, "reactions"));
@@ -344,10 +364,21 @@
         await Promise.all(approved.docs.map(x => deleteDoc(doc(fs, "posts", x.id, "reactions", uid)).catch(() => {})));
         await Promise.all(myImgs.docs.map(x => deleteDoc(x.ref).catch(() => {})));
         if (p && p.nickname) { try { await deleteDoc(doc(fs, "nicknames", p.nickname)); } catch (e) {} }
+        try { await deleteDoc(doc(fs, "publicProfiles", uid)); } catch (e) {}
         await deleteDoc(doc(fs, "users", uid));
         await A.deleteUser(user);
         dirty();
       },
+      async getPublicProfile(uid) { const s = await getDoc(doc(fs, "publicProfiles", uid || me())); return s.exists() ? s.data() : null; },
+      async getPublicProfiles(uids) {
+        const o = {};
+        await Promise.all([...new Set(uids)].map(async u => {
+          if (pubCache[u]) { o[u] = pubCache[u]; return; }
+          try { const s = await getDoc(doc(fs, "publicProfiles", u)); if (s.exists()) o[u] = pubCache[u] = s.data(); } catch (e) {}
+        }));
+        return o;
+      },
+      async savePublicProfile(p) { await setDoc(doc(fs, "publicProfiles", me()), { ...cleanPublic(p), uid: me(), updatedAt: now() }, { merge: true }); delete pubCache[me()]; },
       async uploadImage(dataUrl) { const r = await addDoc(collection(fs, "images"), { data: dataUrl, uid: me(), createdAt: now() }); return "img:" + r.id; },
       async getImage(id) { const s = await getDoc(doc(fs, "images", id)); return s.exists() ? s.data().data : ""; },
       async createPost(p) {
@@ -410,6 +441,7 @@
         const t = now();
         await Promise.all(SEED.courses.map(c => setDoc(doc(fs, "courses", c.id), { ...cleanCourse(c), createdAt: t })));
         await Promise.all(SEED.polls.map((p, i) => setDoc(doc(fs, "polls", p.id), { cat: p.cat, question: p.question, a: p.a, b: p.b, createdAt: t - i })));
+        await Promise.all(Object.entries(SEED.publicProfiles || {}).map(([u, pp]) => setDoc(doc(fs, "publicProfiles", u), { ...pp, uid: u, updatedAt: t })));
         await Promise.all((SEED.posts || []).map((p, i) => setDoc(doc(fs, "posts", p.id), { ...p, status: "approved", pollId: p.type === "vote" ? p.id : null, createdAt: t - (i + 1) * 3600e3, approvedAt: t - (i + 1) * 3600e3 })));
       }
     };

@@ -114,6 +114,10 @@ window.TS_SEED = {
     { id: "poll-08", cat: "hair", question: "가을 머리색은?", a: { label: "흑갈색", img: "" }, b: { label: "애쉬 브라운", img: "" } },
     { id: "poll-09", cat: "hair", question: "펌을 한다면?", a: { label: "C컬", img: "" }, b: { label: "S컬", img: "" } }
   ],
+  // 공개 프로필 (TeenSpot 에디터 계정)
+  publicProfiles: {
+    teenspot: { nickname: "TeenSpot 에디터", official: true, avatar: { skin: 1, hairColor: 0, shirt: 0, bg: 0, hair: "bun", eyes: "smile", mouth: "smile", acc: "glasses", cheek: true }, styleTags: ["꾸안꾸", "캐주얼"], playTags: ["사진", "카페"], personalColor: "" }
+  },
   // 예시 피드 게시물 (TeenSpot 에디터 계정)
   posts: [
     { id: "poll-01", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "outfit", question: "흰 티셔츠엔 어떤 바지?", text: "이번 주 등굣길 코디 고민 중", a: { label: "와이드 데님", img: window.TS_ART["poll-01"][0] }, b: { label: "카고 팬츠", img: window.TS_ART["poll-01"][1] } },

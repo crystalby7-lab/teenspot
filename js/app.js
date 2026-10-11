@@ -172,7 +172,8 @@
         if (p[1] === "new") return p[2] === "review" ? screenNewReview(t, q) : screenNewVote(t);
         if (p[1] === "done") return screenPostDone(t);
         return screenPost(t, p[1]);
-      case "me": return p[1] === "edit" ? screenMeEdit(t) : screenMe(t);
+      case "me": return p[1] === "edit" ? screenMeEdit(t) : p[1] === "style" ? screenAvatarEdit(t) : screenMe(t);
+      case "u": return screenUser(t, p[1]);
       case "settings": return screenSettings(t);
       case "withdraw": return screenWithdraw(t);
       case "admin": return screenAdmin(t, p, q);
@@ -408,6 +409,7 @@
           };
           await S.store.saveProfile(profile);
           S.profile = profile; S.draft = {};
+          await ensurePublic();
           S.admin = await S.store.isAdmin();
           toast(`${profile.nickname}님, 환영해요!`);
           go("#/home");
@@ -567,7 +569,7 @@
       <section>
         <div class="sec-head"><h2>다녀온 후기</h2></div>
         ${reviews.length ? reviews.map(r => `<div class="review card">
-            <div class="rv-top"><b>${esc(r.nickname)}</b><span class="rec-pill ${r.recommend ? "yes" : "no"}">${r.recommend ? "추천" : "비추천"}</span></div>
+            <div class="rv-top"><a href="#/u/${encodeURIComponent(r.uid)}"><b>${esc(r.nickname)}</b></a><span class="rec-pill ${r.recommend ? "yes" : "no"}">${r.recommend ? "추천" : "비추천"}</span></div>
             <p>${esc(r.text)}</p>
             <div class="rv-meta muted tiny"><span>실제 지출 ${won(r.spent)}</span><span>${esc(r.date || "")}</span>${r.uid !== S.user.uid ? `<button class="link tiny" data-rep="${esc(r.uid)}">신고</button>` : ""}</div>
           </div>`).join("") : emptyHtml("edit", "아직 후기가 없어요", "다녀왔다면 첫 후기를 남겨주세요")}
@@ -801,7 +803,8 @@
     const [votes, saves] = await Promise.all([S.store.myVotes(), S.store.getSaves()]);
     const results = {};
     await Promise.all(posts.filter(p => p.type === "vote" && p.pollId && votes[p.pollId]).map(async p => { results[p.pollId] = await S.store.pollResult(p.pollId); }));
-    return { votes, results, saved: new Set(saves.filter(s => s.type === "post").map(s => s.id)) };
+    const pubs = await S.store.getPublicProfiles([...new Set(posts.map(p => p.uid))]);
+    return { votes, results, pubs, saved: new Set(saves.filter(s => s.type === "post").map(s => s.id)) };
   }
   function voteAreaHtml(p, mine, r) {
     if (!mine || !r) {
@@ -820,8 +823,8 @@
       : `<div class="carousel"><div class="track">${(p.images || []).map(ref => `<div class="slide">${imgTag(ref, p.courseTitle)}</div>`).join("")}</div>${(p.images || []).length > 1 ? `<div class="cdots">${p.images.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}</div>
          ${p.courseId ? `<a class="course-chip" href="#/course/${encodeURIComponent(p.courseId)}">${ic("pin", 15)}<span>${esc(p.courseTitle)}</span>${ic("chev", 15)}</a>` : ""}`;
     return `<article class="post" data-pid="${esc(p.id)}">
-      <header class="post-head"><div class="avatar sm">${esc((p.nickname || "?").slice(0, 1))}</div>
-        <div class="grow"><b>${esc(p.nickname)}</b><p class="muted tiny">${isVote ? (CATS[p.cat] || "스타일") + " 투표" : "코스 후기"} · ${ago(p.approvedAt || p.createdAt)}</p></div>
+      <header class="post-head"><a class="post-author" href="#/u/${encodeURIComponent(p.uid)}">${avatarHtml(ctx.pubs[p.uid], 36)}
+        <div class="grow"><div class="name-line">${authorLine(ctx.pubs[p.uid], p.nickname)}</div><p class="muted tiny">${isVote ? (CATS[p.cat] || "스타일") + " 투표" : "코스 후기"} · ${ago(p.approvedAt || p.createdAt)}</p></div></a>
         <button class="icon-btn" data-more aria-label="더보기">${ic("more", 20)}</button></header>
       ${body}
       ${p.text ? `<p class="post-text">${esc(p.text)}</p>` : ""}
@@ -1030,6 +1033,123 @@
   }
 
   /* =========================================================
+     공개 프로필 · 아바타 꾸미기
+     ========================================================= */
+  const STYLE_TAGS = ["꾸안꾸", "힙", "캐주얼", "러블리", "시크", "모리걸", "Y2K", "스트릿", "클래식", "스포티", "빈티지", "미니멀"];
+  const PLAY_TAGS = ["사진", "카페", "노래방", "쇼핑", "산책", "맛집", "보드게임", "전시", "영화", "운동"];
+  const PCOLORS = [["warm", "웜톤"], ["cool", "쿨톤"], ["", "아직 몰라"]];
+  const pcLabel = v => (PCOLORS.find(x => x[0] === v) || [])[1] || "";
+  function avatarHtml(pub, size, cls) {
+    return `<span class="av ${cls || ""}" style="width:${size}px;height:${size}px">${window.TSAvatar.render(pub && pub.avatar, size)}</span>`;
+  }
+  function ageOf(pub) { return pub && pub.birthYear ? calcAge(pub.birthYear, pub.birthMonth || 1) : null; }
+  function authorLine(pub, fallbackNick) {
+    const nick = (pub && pub.nickname) || fallbackNick || "알 수 없음";
+    const age = ageOf(pub);
+    return `<b>${esc(nick)}</b>${pub && pub.official ? `<span class="badge-official">공식</span>` : age ? `<span class="age-chip">${age}살</span>` : ""}`;
+  }
+  async function ensurePublic() {
+    try {
+      S.pub = await S.store.getPublicProfile();
+      if (!S.pub && S.profile) {
+        const p = S.profile;
+        await S.store.savePublicProfile({ nickname: p.nickname, birthYear: p.birthYear, birthMonth: p.birthMonth, avatar: window.TSAvatar.random(), styleTags: [], playTags: [], personalColor: "" });
+        S.pub = await S.store.getPublicProfile();
+      }
+    } catch (e) { console.error(e); }
+  }
+  async function screenUser(t, uid) {
+    paint(t, page(header("프로필", { back: true }) + loadingHtml()));
+    const [pub, feed] = await Promise.all([S.store.getPublicProfile(uid), S.store.listFeed()]);
+    if (!pub) return paint(t, page(header("프로필", { back: true }) + emptyHtml("user", "프로필을 찾을 수 없어요", "탈퇴했거나 주소가 잘못됐어요")));
+    const posts = feed.filter(p => p.uid === uid);
+    const likes = posts.reduce((s, p) => s + (p.likes || 0), 0);
+    const mine = uid === S.user.uid;
+    const age = ageOf(pub);
+    const right = mine ? `<a class="icon-btn" href="#/me/style" aria-label="프로필 꾸미기">${ic("edit", 21)}</a>` : `<button class="icon-btn" id="more" aria-label="더보기">${ic("more", 22)}</button>`;
+    paint(t, page(`
+      ${header(mine ? "내 프로필" : "프로필", { back: true, right })}
+      <section class="pp-head">
+        ${avatarHtml(pub, 96, "lg")}
+        <h1>${esc(pub.nickname)}</h1>
+        <div class="pp-meta">${pub.official ? `<span class="badge-official">공식</span>` : age ? `<span class="age-chip">${age}살</span>` : ""}${pub.personalColor ? `<span class="pc-chip ${esc(pub.personalColor)}">${pcLabel(pub.personalColor)}</span>` : ""}</div>
+        <div class="pp-stats"><div><b>${posts.length}</b><span>게시물</span></div><div><b>${likes}</b><span>받은 좋아요</span></div></div>
+      </section>
+      <section class="card pp-tags">
+        <div><span class="pp-label">추구미</span><div class="tagrow">${(pub.styleTags || []).length ? pub.styleTags.map(x => `<span class="tag lg">${esc(x)}</span>`).join("") : `<span class="muted tiny">${mine ? "아직 고르지 않았어요" : "비공개"}</span>`}</div></div>
+        <div><span class="pp-label">좋아하는 놀거리</span><div class="tagrow">${(pub.playTags || []).length ? pub.playTags.map(x => `<span class="tag lg soft">${esc(x)}</span>`).join("") : `<span class="muted tiny">${mine ? "아직 고르지 않았어요" : "비공개"}</span>`}</div></div>
+      </section>
+      ${mine ? `<a class="btn ghost block" href="#/me/style">${ic("edit", 18)} 프로필 꾸미기</a>` : ""}
+      <section>
+        <div class="sec-head"><h2>게시물</h2></div>
+        ${posts.length ? `<div class="thumb-grid">${posts.map(x => `<a href="#/post/${encodeURIComponent(x.id)}">${imgTag(postThumbRef(x), postTitle(x))}</a>`).join("")}</div>` : emptyHtml("image", "아직 공개된 게시물이 없어요", "")}
+      </section>
+    `), () => {
+      const m = $app.querySelector("#more");
+      if (m) m.onclick = () => {
+        const el = openModal(`<button class="choice" id="ru">${ic("flag", 18)} 이 프로필 신고하기</button><button class="btn ghost block" data-act="close-modal">닫기</button>`);
+        el.querySelector("#ru").onclick = () => reportSheet("user", uid, { title: pub.nickname });
+      };
+    });
+  }
+  function screenAvatarEdit(t) {
+    const A = window.TSAvatar, O = A.OPTIONS, L = A.LABELS;
+    const pub = S.pub || {};
+    const st = { avatar: A.norm(pub.avatar), styleTags: [...(pub.styleTags || [])], playTags: [...(pub.playTags || [])], personalColor: pub.personalColor || "", tab: "hair" };
+    const TABS = [["hair", "머리"], ["face", "얼굴"], ["acc", "소품"], ["color", "색"]];
+    const swatches = (key, list) => `<div class="sw-row">${list.map((c, i) => `<button class="sw ${st.avatar[key] === i ? "on" : ""}" data-k="${key}" data-v="${i}" style="background:${c}" aria-label="${key} ${i + 1}"></button>`).join("")}</div>`;
+    const opts = (key) => `<div class="opt-grid">${O[key].map(v => { const cfg = { ...st.avatar, [key]: v }; return `<button class="opt ${String(st.avatar[key]) === String(v) ? "on" : ""}" data-k="${key}" data-v="${v}">${A.render(cfg, 56)}<span>${L[key][v]}</span></button>`; }).join("")}</div>`;
+    const panel = () => {
+      switch (st.tab) {
+        case "hair": return `<p class="pl">머리 모양</p>${opts("hair")}<p class="pl">머리 색</p>${swatches("hairColor", O.hairColor)}`;
+        case "face": return `<p class="pl">피부 톤</p>${swatches("skin", O.skin)}<p class="pl">눈</p>${opts("eyes")}<p class="pl">입</p>${opts("mouth")}<p class="pl">볼</p>${opts("cheek")}`;
+        case "acc": return `<p class="pl">소품</p>${opts("acc")}`;
+        default: return `<p class="pl">옷 색</p>${swatches("shirt", O.shirt)}<p class="pl">배경 색</p>${swatches("bg", O.bg)}`;
+      }
+    };
+    const tagPicker = (id, list, sel) => `<div class="chips" id="${id}">${list.map(x => `<button class="chip ${sel.includes(x) ? "on" : ""}" data-t="${esc(x)}">${esc(x)}</button>`).join("")}</div>`;
+    paint(t, page(`
+      ${header("프로필 꾸미기", { back: true })}
+      <section class="av-stage"><div id="preview">${avatarHtml({ avatar: st.avatar }, 132, "lg")}</div><button class="btn ghost sm" id="rand">랜덤</button></section>
+      <div class="seg" id="tabs">${TABS.map(([k, l]) => `<a href="javascript:void 0" data-tab="${k}" class="${k === st.tab ? "on" : ""}">${l}</a>`).join("")}</div>
+      <div class="card av-panel" id="panel">${panel()}</div>
+      <div class="field"><span>추구미 <small class="muted">최대 3개</small></span>${tagPicker("style", STYLE_TAGS, st.styleTags)}</div>
+      <div class="field"><span>퍼스널컬러</span><div class="chips" id="pc">${PCOLORS.map(([v, l]) => `<button class="chip ${st.personalColor === v ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div></div>
+      <div class="field"><span>좋아하는 놀거리 <small class="muted">최대 3개</small></span>${tagPicker("play", PLAY_TAGS, st.playTags)}</div>
+      <p class="hint mt">프로필에는 닉네임, 아바타, 나이, 고른 태그만 보여요. 지역과 이메일은 공개되지 않아요</p>
+      <div class="bottom-cta"><button class="btn block lg" id="ok">저장</button></div>
+    `), () => {
+      const preview = () => ($app.querySelector("#preview").innerHTML = avatarHtml({ avatar: st.avatar }, 132, "lg"));
+      const drawPanel = () => {
+        const el = $app.querySelector("#panel"); el.innerHTML = panel();
+        el.querySelectorAll("[data-k]").forEach(b => (b.onclick = () => {
+          const k = b.dataset.k, raw = b.dataset.v;
+          st.avatar[k] = ["skin", "hairColor", "shirt", "bg"].includes(k) ? Number(raw) : k === "cheek" ? raw === "true" : raw;
+          drawPanel(); preview();
+        }));
+      };
+      drawPanel();
+      $app.querySelectorAll("#tabs [data-tab]").forEach(a => (a.onclick = e => { e.preventDefault(); st.tab = a.dataset.tab; $app.querySelectorAll("#tabs a").forEach(x => x.classList.toggle("on", x === a)); drawPanel(); }));
+      $app.querySelector("#rand").onclick = () => { st.avatar = A.norm({ ...A.random(), acc: A.OPTIONS.acc[Math.floor(Math.random() * A.OPTIONS.acc.length)] }); drawPanel(); preview(); };
+      const bindTags = (id, arr) => $app.querySelectorAll(`#${id} .chip`).forEach(b => (b.onclick = () => {
+        const v = b.dataset.t, i = arr.indexOf(v);
+        if (i >= 0) arr.splice(i, 1); else { if (arr.length >= 3) return toast("최대 3개까지 고를 수 있어요"); arr.push(v); }
+        b.classList.toggle("on", arr.includes(v));
+      }));
+      bindTags("style", st.styleTags); bindTags("play", st.playTags);
+      $app.querySelectorAll("#pc .chip").forEach(b => (b.onclick = () => { st.personalColor = b.dataset.v; $app.querySelectorAll("#pc .chip").forEach(x => x.classList.toggle("on", x === b)); }));
+      $app.querySelector("#ok").onclick = async e => {
+        e.currentTarget.disabled = true;
+        try {
+          await S.store.savePublicProfile({ avatar: st.avatar, styleTags: st.styleTags, playTags: st.playTags, personalColor: st.personalColor });
+          S.pub = await S.store.getPublicProfile();
+          toast("프로필을 저장했어요"); go("#/u/" + encodeURIComponent(S.user.uid));
+        } catch (er) { toast("저장에 실패했어요"); e.currentTarget.disabled = false; }
+      };
+    });
+  }
+
+  /* =========================================================
      6. 저장·마이
      ========================================================= */
   async function screenSaved(t, q) {
@@ -1057,10 +1177,14 @@
     const p = S.profile;
     paint(t, page(`
       ${header("마이", { right: `<a class="icon-btn" href="#/settings" aria-label="설정">${ic("settings", 22)}</a>` })}
-      <section class="card profile">
-        <div class="avatar">${esc(p.nickname.slice(0, 1))}</div>
-        <div class="grow"><h2>${esc(p.nickname)}</h2><p class="muted tiny">${esc(p.gu)} · ${(p.interests || []).map(esc).join(", ")}</p></div>
-        <a class="btn ghost sm" href="#/me/edit">수정</a>
+      <section class="card profile-card">
+        <div class="profile">
+          <a href="#/u/${encodeURIComponent(S.user.uid)}">${avatarHtml(S.pub, 64)}</a>
+          <div class="grow"><div class="name-line"><h2>${esc(p.nickname)}</h2>${ageOf(S.pub) ? `<span class="age-chip">${ageOf(S.pub)}살</span>` : ""}</div>
+            <div class="tagrow sm">${S.pub && (S.pub.styleTags || []).length ? S.pub.styleTags.map(x => `<span class="tag">${esc(x)}</span>`).join("") : `<span class="muted tiny">추구미를 골라 프로필을 꾸며보세요</span>`}</div></div>
+        </div>
+        <div class="row gap mt"><a class="btn ghost sm grow" href="#/me/style">프로필 꾸미기</a><a class="btn ghost sm grow" href="#/u/${encodeURIComponent(S.user.uid)}">내 프로필 보기</a></div>
+        <a class="link block tiny" href="#/me/edit">닉네임·지역·관심사 수정 (지역은 비공개)</a>
       </section>
       <a class="card hist" href="#/saved">${ic("bookmark", 20)}<div class="grow"><b>저장한 항목</b></div>${ic("chev", 18, "chev")}</a>
       <section>
@@ -1102,6 +1226,7 @@
           if (nick !== p.nickname) await S.store.setNickname(nick, p.nickname);
           const upd = { nickname: nick, gu, interests: [...sel] };
           await S.store.saveProfile(upd); Object.assign(S.profile, upd);
+          if (S.pub && S.pub.nickname !== nick) { await S.store.savePublicProfile({ nickname: nick }); S.pub = await S.store.getPublicProfile(); }
           if (S.spotFilter) S.spotFilter.gu = gu;
           toast("저장했어요"); back("#/me");
         } catch (er) { toast(er.message || "저장에 실패했어요"); e.currentTarget.disabled = false; }
@@ -1298,8 +1423,8 @@
     paint(t, page(header("신고 처리", { back: true }) + loadingHtml()));
     const reps = await S.store.listReports();
     const open = reps.filter(r => r.status === "open");
-    const label = { course: "코스", review: "후기", poll: "투표", post: "게시물" };
-    const target = r => r.type === "post" ? `#/post/${encodeURIComponent(r.targetId)}` : r.type === "review" ? `#/course/${encodeURIComponent((r.extra || {}).cid || "")}` : r.type === "course" ? `#/course/${encodeURIComponent(r.targetId)}` : `#/poll/${encodeURIComponent(r.targetId)}`;
+    const label = { course: "코스", review: "후기", poll: "투표", post: "게시물", user: "프로필" };
+    const target = r => r.type === "user" ? `#/u/${encodeURIComponent(r.targetId)}` : r.type === "post" ? `#/post/${encodeURIComponent(r.targetId)}` : r.type === "review" ? `#/course/${encodeURIComponent((r.extra || {}).cid || "")}` : r.type === "course" ? `#/course/${encodeURIComponent(r.targetId)}` : `#/poll/${encodeURIComponent(r.targetId)}`;
     paint(t, page(`
       ${header("신고 처리", { back: true })}
       ${reps.length ? reps.map(r => `<div class="card sub-card">
@@ -1363,10 +1488,10 @@
     await S.store.init();
     let first = true;
     S.store.onAuth(async u => {
-      S.user = u; S.profile = null; S.admin = false;
+      S.user = u; S.profile = null; S.admin = false; S.pub = null;
       if (u) {
         try { S.profile = await S.store.getProfile(); } catch (e) { console.error(e); }
-        if (S.profile) { try { S.admin = await S.store.isAdmin(); } catch (e) {} }
+        if (S.profile) { try { S.admin = await S.store.isAdmin(); } catch (e) {} await ensurePublic(); }
       }
       if (first) {
         first = false;
