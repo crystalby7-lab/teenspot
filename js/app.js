@@ -498,7 +498,7 @@
           <p>${esc(S.profile.nickname)}님, 이번 주말엔</p>
           <h2>친구랑<br>어디 갈까?</h2>
         </div>
-        <div class="hero-mascot">${mascot("happy", 86, { inverse: true })}</div>
+        <div class="hero-mascot">${mascot("default", 76, { inverse: true })}</div>
         <a class="hero-cond" href="#/spot" aria-label="조건 바꾸기">
           <span><small>인원</small><b class="num">${f.people}명</b></span>
           <span><small>1인 예산</small><b class="num">${budgetLabel === "상관없음" ? "자유" : budgetLabel}</b></span>

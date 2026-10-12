@@ -15,7 +15,7 @@ js/config.js            Firebase 설정, 문의 이메일, 시작 지역
 js/store.js             데이터 계층 (체험 모드 / Firebase)
 js/media.js             사진 압축 (비율 자르기, JPEG 재저장, 위치 정보 제거)
 js/icons.js             선 아이콘
-js/brand.js             마스코트 '스팟이'와 워드마크
+js/brand.js             마스코트 '스팟이'(보영 원본 그림)와 워드마크
 js/avatar.js            아바타 캐릭터 (부위별 옵션 → SVG)
 js/app.js               화면 31개, 라우터
 js/seed.js              서대문구 예시 코스 8개, 투표 9개

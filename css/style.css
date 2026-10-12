@@ -83,7 +83,7 @@ input::placeholder, textarea::placeholder { color: #A9B1C0; }
 
 /* 브랜드 */
 .wordmark { display: inline-flex; align-items: baseline; font-family: var(--font-brand); font-weight: 700; letter-spacing: -0.025em; line-height: 1; color: var(--navy); white-space: nowrap; }
-.wm-pin { width: .7em; height: .7em; margin: 0 .01em 0 .015em; transform: translateY(.11em); flex: none; }
+.wm-pin { width: .6em; height: .73em; margin: 0 .02em 0 .03em; transform: translateY(.12em) rotate(-4deg); flex: none; }
 .wm-bar { font-size: 25px; padding-left: 8px; }
 .wm-login { font-size: 46px; color: #fff; --wm-face: var(--navy); }
 .mascot { display: block; flex: none; overflow: visible; }
@@ -174,7 +174,7 @@ a.card:active, .course-card:active, .strip-item:active, .thumb-grid a:active { t
 .hero::before { content: ""; position: absolute; z-index: -1; width: 260px; height: 260px; right: -90px; top: -110px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, .09), transparent); }
 .hero-text p { margin: 0 0 6px; font-size: 14px; color: rgba(255, 255, 255, .62); font-weight: 600; }
 .hero-text h2 { font-size: 28px; line-height: 1.25; letter-spacing: -0.045em; color: #fff; }
-.hero-mascot { position: absolute; right: 18px; top: 22px; transform: rotate(8deg); }
+.hero-mascot { position: absolute; right: 16px; top: 14px; transform: rotate(6deg); }
 .hero-cond { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); margin: 22px 0 12px; padding: 12px 34px 12px 4px; border-radius: 16px; background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
 .hero-cond span { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .hero-cond span + span { box-shadow: -1px 0 0 rgba(255, 255, 255, .12); }
@@ -375,7 +375,7 @@ a.card:active, .course-card:active, .strip-item:active, .thumb-grid a:active { t
 .onboard-top { display: flex; justify-content: flex-end; height: 40px; }
 .onboard-top .link { color: var(--muted); }
 .onboard-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.onboard-art { position: relative; width: 260px; height: 230px; max-width: 100%; display: grid; place-items: center; margin-bottom: 26px; }
+.onboard-art { position: relative; width: 260px; height: 250px; max-width: 100%; display: grid; place-items: center; margin-bottom: 26px; }
 .onboard-art .mascot { animation: bob 1.6s var(--ease) infinite alternate; }
 .ob-chip { position: absolute; z-index: 1; height: 38px; padding: 0 14px; border-radius: 13px; background: var(--card); color: var(--navy); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; box-shadow: var(--float); font-family: var(--font-num); white-space: nowrap; }
 .ob-chip.c0 { left: 0; top: 30px; transform: rotate(-6deg); }
