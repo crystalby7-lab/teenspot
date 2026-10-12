@@ -592,3 +592,24 @@ img.lazy { background: var(--navy-100); }
 .hint-warn { background: var(--danger-soft); color: #9E3430; }
 .block-row .av { margin-right: 2px; }
 .group .block-row + .block-row { box-shadow: inset 0 1px 0 var(--line); }
+
+/* 정렬 · 검색 · 지도 · 마감 */
+.sort-row { display: flex; gap: 14px; margin: -4px 2px 12px; }
+.sort-row a { font-size: 13.5px; font-weight: 700; color: var(--navy-300); position: relative; }
+.sort-row a.on { color: var(--ink); }
+.sort-row a.on::before { content: ""; position: absolute; left: -8px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: var(--navy); }
+.sort-row a:first-child.on::before { display: none; }
+.search-box { display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 14px; border-radius: var(--r-sm); background: var(--card); margin-top: 4px; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--line); }
+.search-box:focus-within { box-shadow: inset 0 0 0 1.5px var(--navy); }
+.search-box input { height: 48px; padding: 0; background: transparent; border: 0; }
+.search-box input:focus { background: transparent; }
+#results { margin-top: 6px; }
+a.chip { display: inline-flex; align-items: center; }
+a.tag.lg { text-decoration: none; }
+.map-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; padding: 4px 9px 4px 7px; border: 0; border-radius: 8px; background: var(--navy-50); color: var(--navy-700); font-size: 12px; font-weight: 700; }
+.map-link:active { background: var(--navy-100); }
+.deadline { margin: -12px 0 16px; font-weight: 700; color: var(--accent); font-size: 14px; }
+.tag.soft-time { background: var(--accent-soft); color: #A9472E; }
+.pv-hint b { color: var(--accent); font-weight: 700; }
+.search-box input, .search-box input:focus, .search-box input:focus-visible { border: 0; outline: none; box-shadow: none; border-radius: 0; }
+.map-link { display: flex; width: fit-content; }

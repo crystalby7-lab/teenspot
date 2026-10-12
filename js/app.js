@@ -188,6 +188,7 @@
       case "u": return screenUser(t, p[1]);
       case "points": return screenPoints(t);
       case "notifications": return screenNotis(t);
+      case "search": return screenSearch(t, q);
       case "blocked": return screenBlockList(t);
       case "settings": return screenSettings(t);
       case "withdraw": return screenWithdraw(t);
@@ -474,9 +475,17 @@
     const o = p[side];
     return o.img ? imgTag(o.img, o.label) : `<span>${esc(o.label)}</span>`;
   }
+  const isEnded = x => !!(x && x.endsAt && Date.now() > x.endsAt);
+  function timeLeft(x) {
+    if (!x || !x.endsAt) return "";
+    const ms = x.endsAt - Date.now();
+    if (ms <= 0) return "마감";
+    const h = Math.floor(ms / 3600e3);
+    return h >= 24 ? `${Math.floor(h / 24)}일 남음` : h >= 1 ? `${h}시간 남음` : `${Math.max(1, Math.floor(ms / 60e3))}분 남음`;
+  }
   function pollCard(p, voted) {
     return `<a class="card poll-card" href="#/poll/${encodeURIComponent(p.id)}">
-      <div class="pc-top"><span class="tag">${CATS[p.cat] || ""}</span>${voted ? `<span class="tag done">투표 완료</span>` : `<span class="tag new">투표하기</span>`}</div>
+      <div class="pc-top"><span class="tag">${CATS[p.cat] || ""}</span>${isEnded(p) ? `<span class="tag done">마감</span>` : voted ? `<span class="tag done">투표 완료</span>` : `<span class="tag new">투표하기</span>`}${p.endsAt && !isEnded(p) ? `<span class="tag soft-time num">${timeLeft(p)}</span>` : ""}</div>
       <h3>${esc(p.question)}</h3>
       <div class="pc-ab"><div class="ab a">${pollThumb("a", p)}</div><i>vs</i><div class="ab b">${pollThumb("b", p)}</div></div>
     </a>`;
@@ -537,7 +546,7 @@
   function screenSpot(t) {
     const f = S.spotFilter || (S.spotFilter = { people: 3, budget: 15000, hours: 4, gu: S.profile.gu });
     paint(t, page(`
-      ${header("코스")}
+      ${header("코스", { right: `<a class="icon-btn" href="#/search" aria-label="검색">${ic("search", 22)}</a>` })}
       <h1 class="step-title">오늘 친구랑 어디 갈까?</h1>
       <div class="card form-card">
         <div class="field"><span>인원</span>
@@ -595,7 +604,7 @@
         ${c.submittedBy ? `<p class="tiny muted">제보: ${esc(c.submittedBy)}</p>` : ""}
       </section>
       <section class="card">
-        <ol class="timeline">${c.stops.map((s, i) => `<li><span class="tl-num">${i + 1}</span><div><b>${esc(s.name)}</b>${s.note ? `<p class="muted tiny">${esc(s.note)}</p>` : ""}</div><span class="tl-cost">${won(s.cost)}</span></li>`).join("")}</ol>
+        <ol class="timeline">${c.stops.map((s, i) => `<li><span class="tl-num">${i + 1}</span><div><b>${esc(s.name)}</b>${s.note ? `<p class="muted tiny">${esc(s.note)}</p>` : ""}<button class="map-link" data-map="${i}">${ic("map", 13)}지도에서 보기</button></div><span class="tl-cost">${won(s.cost)}</span></li>`).join("")}</ol>
         <div class="total"><span>1인 예상 합계</span><b>${won(c.total)}</b></div>
         ${c.note ? `<p class="tiny muted">${esc(c.note)}</p>` : ""}
       </section>
@@ -626,6 +635,13 @@
       };
       $app.querySelector("#share").onclick = () => share(c.title, "#/course/" + encodeURIComponent(id));
       $app.querySelector("#rev").onclick = () => go(`#/course/${encodeURIComponent(id)}/review`);
+      $app.querySelectorAll("[data-map]").forEach(b => (b.onclick = () => {
+        const st = c.stops[Number(b.dataset.map)], q = encodeURIComponent(`${c.gu} ${st.name}`);
+        const el = openModal(`<h3>${esc(st.name)}</h3><p class="muted">지도 앱에서 검색해요. 이름이 비슷한 다른 곳이 나올 수 있으니 위치를 확인해주세요</p>
+          <div class="list-choice"><a class="choice" href="https://map.naver.com/p/search/${q}" target="_blank" rel="noopener">네이버 지도에서 보기</a><a class="choice" href="https://map.kakao.com/?q=${q}" target="_blank" rel="noopener">카카오맵에서 보기</a></div>
+          <button class="btn ghost block" data-act="close-modal">닫기</button>`);
+        el.querySelectorAll("a.choice").forEach(a => (a.onclick = () => closeModal()));
+      }));
       ["#addphoto", "#addphoto2"].forEach(sel => { const b = $app.querySelector(sel); if (b) b.onclick = () => go("#/post/new/review?course=" + encodeURIComponent(id)); });
       $app.querySelector("#more").onclick = () => {
         const el = openModal(`<button class="choice" id="rc">이 코스 신고하기</button><button class="btn ghost block" data-act="close-modal">닫기</button>`);
@@ -775,10 +791,12 @@
         el.querySelector("#rp").onclick = () => reportSheet("poll", id, { title: p.question });
       };
     };
-    if (!mine) {
+    const ended = isEnded(p);
+    if (!mine && !ended) {
       paint(t, page(`
         ${header(CATS[p.cat] || "투표", { back: true, right })}
         <h1 class="poll-q">${esc(p.question)}</h1>
+        ${p.endsAt ? `<p class="center deadline num">${timeLeft(p)}</p>` : ""}
         <div class="vote-ab">
           <button class="vote-opt a" data-v="a">${pollThumb("a", p)}<b>${esc(p.a.label)}</b></button>
           <button class="vote-opt b" data-v="b">${pollThumb("b", p)}<b>${esc(p.b.label)}</b></button>
@@ -804,8 +822,8 @@
           <div class="res-thumb ${k}">${pollThumb(k, p)}</div>
           <div class="grow"><div class="res-label"><b>${esc(p[k].label)}</b>${mine === k ? `<span class="tag">내 선택</span>` : ""}<span class="res-pct">${k === "a" ? pa : pb}%</span></div>
           <div class="bar"><i class="${k}" style="width:${k === "a" ? pa : pb}%"></i></div></div></div>`).join("")}
-        <p class="center muted">또래 <b>${total.toLocaleString("ko-KR")}명</b>이 투표했어요</p>
-        <p class="center">${win === null ? "의견이 딱 반반이에요" : win === mine ? "다수와 같은 선택이에요" : "소수의 취향을 골랐어요"}</p>
+        <p class="center muted">또래 <b>${total.toLocaleString("ko-KR")}명</b>이 투표했어요${ended ? " · 마감" : p.endsAt ? " · " + timeLeft(p) : ""}</p>
+        <p class="center">${!mine ? (win === null ? "투표가 마감됐어요. 결과는 딱 반반이에요" : `투표가 마감됐어요. '${esc(p[win].label)}'가 더 많이 골랐어요`) : win === null ? "의견이 딱 반반이에요" : win === mine ? "다수와 같은 선택이에요" : "소수의 취향을 골랐어요"}</p>
       </div>
       ${next ? `<a class="btn block lg" href="#/poll/${encodeURIComponent(next.id)}">다음 투표</a>` : `<a class="btn block lg" href="#/style">스타일로 돌아가기</a>`}
     `, "style"), bindCommon);
@@ -845,18 +863,19 @@
   async function feedContext(posts) {
     const [votes, saves] = await Promise.all([S.store.myVotes(), S.store.getSaves()]);
     const results = {};
-    await Promise.all(posts.filter(p => p.type === "vote" && p.pollId && votes[p.pollId]).map(async p => { results[p.pollId] = await S.store.pollResult(p.pollId); }));
+    await Promise.all(posts.filter(p => p.type === "vote" && p.pollId && (votes[p.pollId] || isEnded(p))).map(async p => { results[p.pollId] = await S.store.pollResult(p.pollId); }));
     const pubs = await S.store.getPublicProfiles([...new Set(posts.map(p => p.uid))]);
     return { votes, results, pubs, saved: new Set(saves.filter(s => s.type === "post").map(s => s.id)) };
   }
   function voteAreaHtml(p, mine, r) {
-    if (!mine || !r) {
+    const ended = isEnded(p);
+    if ((!mine && !ended) || !r) {
       return `<div class="pv-grid">${["a", "b"].map(k => `<button class="pv-opt" data-pick="${k}" aria-label="${esc(p[k].label)} 선택">${imgTag(p[k].img, p[k].label)}<span class="pv-label">${esc(p[k].label)}</span></button>`).join("")}</div>
-        <p class="pv-hint">마음에 드는 쪽을 눌러 투표해요</p>`;
+        <p class="pv-hint">마음에 드는 쪽을 눌러 투표해요${p.endsAt ? ` · <b class="num">${timeLeft(p)}</b>` : ""}</p>`;
     }
     const total = r.a + r.b, pa = pct(r.a, total), pb = total ? 100 - pa : 0;
     return `<div class="pv-grid done">${["a", "b"].map(k => { const v = k === "a" ? pa : pb; return `<div class="pv-opt ${mine === k ? "mine" : ""}">${imgTag(p[k].img, p[k].label)}<div class="pv-res"><b>${v}%</b><span>${esc(p[k].label)}${mine === k ? " · 내 선택" : ""}</span></div></div>`; }).join("")}</div>
-      <p class="pv-hint">또래 ${total.toLocaleString("ko-KR")}명 참여</p>`;
+      <p class="pv-hint">또래 ${total.toLocaleString("ko-KR")}명 참여${ended ? " · 투표 마감" : p.endsAt ? " · " + timeLeft(p) : ""}</p>`;
   }
   function feedCard(p, ctx) {
     const isVote = p.type === "vote";
@@ -950,14 +969,18 @@
   }
   async function screenFeed(t, q) {
     const f = ["vote", "review"].includes(q.f) ? q.f : "all";
-    const right = `<button class="icon-btn" id="up" aria-label="게시물 올리기">${ic("plus", 24)}</button>`;
+    const sort = q.sort === "hot" ? "hot" : "new";
+    const right = `<a class="icon-btn" href="#/search" aria-label="검색">${ic("search", 22)}</a><button class="icon-btn" id="up" aria-label="게시물 올리기">${ic("plus", 24)}</button>`;
     paint(t, page(header("피드", { right }) + loadingHtml(), "feed"));
     const all = visible(await S.store.listFeed());
-    const posts = all.filter(p => f === "all" || p.type === f);
+    const score = p => (p.likes || 0) * 2 + Object.values(p.praise || {}).reduce((a, b) => a + b, 0);
+    let posts = all.filter(p => f === "all" || p.type === f);
+    if (sort === "hot") posts = [...posts].sort((a, b) => score(b) - score(a) || (b.approvedAt || b.createdAt) - (a.approvedAt || a.createdAt));
     const ctx = await feedContext(posts);
     paint(t, page(`
       ${header("피드", { right })}
-      <div class="seg">${[["all", "전체"], ["vote", "투표"], ["review", "코스 후기"]].map(([k, l]) => `<a href="#/feed?f=${k}" class="${f === k ? "on" : ""}">${l}</a>`).join("")}</div>
+      <div class="seg">${[["all", "전체"], ["vote", "투표"], ["review", "코스 후기"]].map(([k, l]) => `<a href="#/feed?f=${k}&sort=${sort}" class="${f === k ? "on" : ""}">${l}</a>`).join("")}</div>
+      <div class="sort-row">${[["new", "최신순"], ["hot", "인기순"]].map(([k, l]) => `<a href="#/feed?f=${f}&sort=${k}" class="${sort === k ? "on" : ""}">${l}</a>`).join("")}</div>
       ${posts.length ? `<div class="feed">${posts.map(p => feedCard(p, ctx)).join("")}</div><p class="tiny muted center feed-end">모든 게시물을 봤어요</p>`
         : emptyHtml("image", "아직 게시물이 없어요", "첫 사진을 올려보세요", `<button class="btn sm" id="up2">게시물 올리기</button>`)}
     `, "feed"), () => {
@@ -996,7 +1019,7 @@
     };
   }
   function screenNewVote(t) {
-    const st = { cat: "outfit", a: null, b: null };
+    const st = { cat: "outfit", a: null, b: null, dur: 72 };
     paint(t, page(`
       ${header("스타일 투표 올리기", { back: true })}
       <div class="field"><span>카테고리</span><div class="chips" id="cat">${Object.entries(CATS).map(([k, l]) => `<button class="chip ${k === st.cat ? "on" : ""}" data-v="${k}">${l}</button>`).join("")}</div></div>
@@ -1005,11 +1028,13 @@
         <div class="slot-grid">${["a", "b"].map(k => `<div class="slot-col"><button class="slot" id="slot-${k}" aria-label="${k.toUpperCase()} 사진 고르기"><span class="slot-empty">${ic("image", 26)}<b>${k.toUpperCase()} 사진</b></span></button>
           <input type="file" accept="image/*" id="file-${k}" hidden>
           <input id="label-${k}" maxlength="15" placeholder="${k.toUpperCase()} 이름 (예: ${k === "a" ? "와이드 데님" : "카고 팬츠"})"></div>`).join("")}</div></div>
+      <div class="field"><span>투표 기간 <small class="muted">공개된 때부터</small></span><div class="chips" id="dur">${[[24, "24시간"], [72, "3일"], [168, "7일"], [0, "마감 없음"]].map(([v, l]) => `<button class="chip ${v === 72 ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div></div>
       <label class="field"><span>한 줄 설명 (선택) <small class="muted" id="cnt">0/100</small></span><textarea id="text" rows="2" maxlength="100" placeholder="어떤 상황에 입을 옷인지 알려주면 투표하기 쉬워요"></textarea></label>
       ${photoRules()}
       <div class="bottom-cta"><button class="btn block lg" id="ok">올리기</button></div>
     `), () => {
       $app.querySelectorAll("#cat .chip").forEach(b => (b.onclick = () => { st.cat = b.dataset.v; $app.querySelectorAll("#cat .chip").forEach(x => x.classList.toggle("on", x === b)); }));
+      $app.querySelectorAll("#dur .chip").forEach(b => (b.onclick = () => { st.dur = Number(b.dataset.v); $app.querySelectorAll("#dur .chip").forEach(x => x.classList.toggle("on", x === b)); }));
       ["a", "b"].forEach(k => {
         const slot = $app.querySelector("#slot-" + k), file = $app.querySelector("#file-" + k);
         slot.onclick = () => file.click();
@@ -1026,7 +1051,7 @@
         const btn = e.currentTarget; btn.disabled = true; btn.textContent = "올리는 중...";
         try {
           const [ra, rb] = [await S.store.uploadImage(st.a), await S.store.uploadImage(st.b)];
-          await S.store.createPost({ type: "vote", cat: st.cat, question, text: tx.value.trim(), a: { label: la, img: ra }, b: { label: lb, img: rb } });
+          await S.store.createPost({ type: "vote", cat: st.cat, question, text: tx.value.trim(), durationH: st.dur, a: { label: la, img: ra }, b: { label: lb, img: rb } });
           go("#/post/done");
         } catch (er) { toast(er.message || "올리기에 실패했어요"); btn.disabled = false; btn.textContent = "올리기"; }
       };
@@ -1123,7 +1148,7 @@
         <div class="pp-stats"><div><b>${posts.length}</b><span>게시물</span></div><div><b>${likes}</b><span>받은 좋아요</span></div></div>
       </section>
       <section class="card pp-tags">
-        <div><span class="pp-label">추구미</span><div class="tagrow">${(pub.styleTags || []).length ? pub.styleTags.map(x => `<span class="tag lg">${esc(x)}</span>`).join("") : `<span class="muted tiny">${mine ? "아직 고르지 않았어요" : "비공개"}</span>`}</div></div>
+        <div><span class="pp-label">추구미</span><div class="tagrow">${(pub.styleTags || []).length ? pub.styleTags.map(x => `<a class="tag lg" href="#/search?tag=${encodeURIComponent(x)}">${esc(x)}</a>`).join("") : `<span class="muted tiny">${mine ? "아직 고르지 않았어요" : "비공개"}</span>`}</div></div>
         <div><span class="pp-label">좋아하는 놀거리</span><div class="tagrow">${(pub.playTags || []).length ? pub.playTags.map(x => `<span class="tag lg soft">${esc(x)}</span>`).join("") : `<span class="muted tiny">${mine ? "아직 고르지 않았어요" : "비공개"}</span>`}</div></div>
       </section>
       ${mine ? `<a class="btn ghost block" href="#/me/style">${ic("edit", 18)} 프로필 꾸미기</a>` : ""}
@@ -1390,6 +1415,45 @@
         : `<div class="center-screen">${mascot("sleepy", 80)}<h2>아직 알림이 없어요</h2><p class="muted">게시물을 올리거나 투표하면 소식이 여기 모여요</p></div>`}
     `));
     if (list.length) S.store.saveProfile({ notiSeen: Date.now() }).then(() => { S.profile.notiSeen = Date.now(); }).catch(() => {});
+  }
+
+  /* =========================================================
+     검색
+     ========================================================= */
+  async function screenSearch(t, q) {
+    paint(t, page(header("검색", { back: true }) + loadingHtml()));
+    const [courses, feedAll] = await Promise.all([S.store.listCourses(), S.store.listFeed()]);
+    const feed = visible(feedAll);
+    const pubs = await S.store.getPublicProfiles([...new Set(feed.map(p => p.uid))]);
+    const norm = x => String(x || "").toLowerCase().replace(/\s+/g, "");
+    const run = (text, tag) => {
+      if (tag) {
+        const posts = feed.filter(p => ((pubs[p.uid] || {}).styleTags || []).includes(tag));
+        return `<p class="list-count">추구미 <b>${esc(tag)}</b>인 친구들의 게시물 <b class="num">${posts.length}</b>개</p>
+          ${posts.length ? `<div class="thumb-grid">${posts.map(p => `<a href="#/post/${encodeURIComponent(p.id)}">${imgTag(postThumbRef(p), postTitle(p))}</a>`).join("")}</div>` : emptyHtml("search", "아직 게시물이 없어요", "다른 추구미 태그를 골라보세요")}`;
+      }
+      const k = norm(text);
+      if (!k) return `<p class="pl">추구미로 찾기</p><div class="chips">${STYLE_TAGS.map(x => `<a class="chip" href="#/search?tag=${encodeURIComponent(x)}">${esc(x)}</a>`).join("")}</div>
+        <p class="pl">이런 걸 찾아보세요</p><div class="chips">${["신촌", "이대", "노래방", "떡볶이", "카페", "산책"].map(x => `<button class="chip" data-q="${x}">${x}</button>`).join("")}</div>`;
+      const cs = courses.filter(c => norm([c.title, c.area, c.gu, ...(c.stops || []).map(s => s.name)].join(" ")).includes(k));
+      const ps = feed.filter(p => norm([p.question, p.text, p.courseTitle, p.a && p.a.label, p.b && p.b.label].join(" ")).includes(k));
+      const tagHit = STYLE_TAGS.find(x => norm(x) === k);
+      return `${tagHit ? `<a class="cta-card" href="#/search?tag=${encodeURIComponent(tagHit)}"><span class="cta-ic">${ic("user", 20)}</span><div><b>추구미 '${esc(tagHit)}' 게시물 보기</b></div>${ic("chev", 18, "chev")}</a>` : ""}
+        <div class="sec-head mt"><h2>코스 <small class="muted">${cs.length}</small></h2></div>
+        ${cs.length ? courseList(cs) : `<p class="muted tiny">맞는 코스가 없어요</p>`}
+        <div class="sec-head mt"><h2>게시물 <small class="muted">${ps.length}</small></h2></div>
+        ${ps.length ? `<div class="thumb-grid">${ps.map(p => `<a href="#/post/${encodeURIComponent(p.id)}">${imgTag(postThumbRef(p), postTitle(p))}</a>`).join("")}</div>` : `<p class="muted tiny">맞는 게시물이 없어요</p>`}`;
+    };
+    paint(t, page(`
+      ${header(q.tag ? "#" + q.tag : "검색", { back: true })}
+      ${q.tag ? "" : `<div class="search-box">${ic("search", 18)}<input id="sq" type="search" placeholder="코스, 장소, 게시물 검색" value="${esc(q.q || "")}" autocomplete="off" enterkeyhint="search"></div>`}
+      <div id="results">${run(q.q, q.tag)}</div>
+    `), () => {
+      const inp = $app.querySelector("#sq"), box = $app.querySelector("#results");
+      const bindQ = () => box.querySelectorAll("[data-q]").forEach(b => (b.onclick = () => { inp.value = b.dataset.q; update(); }));
+      const update = () => { box.innerHTML = run(inp.value); hydrateImages(box); bindQ(); history.replaceState(null, "", "#/search" + (inp.value ? "?q=" + encodeURIComponent(inp.value) : "")); S.lastPath = "/search"; };
+      if (inp) { let tm; inp.oninput = () => { clearTimeout(tm); tm = setTimeout(update, 180); }; bindQ(); if (!q.q) inp.focus(); }
+    });
   }
 
   /* =========================================================

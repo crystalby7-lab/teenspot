@@ -19,6 +19,7 @@
       out.cat = p.cat; out.question = String(p.question || "").slice(0, 30);
       out.a = { label: String(p.a.label || "").slice(0, 15), img: p.a.img };
       out.b = { label: String(p.b.label || "").slice(0, 15), img: p.b.img };
+      out.durationH = [24, 72, 168, 0].includes(Number(p.durationH)) ? Number(p.durationH) : 72;
     } else {
       out.courseId = p.courseId; out.courseTitle = p.courseTitle || "";
       out.images = (p.images || []).slice(0, 4);
@@ -129,6 +130,8 @@
       async listPolls() { return Object.values(db().polls).sort((a, b) => b.createdAt - a.createdAt); },
       async myVotes() { const o = {}; Object.entries(db().votes).forEach(([pid, m]) => { if (m[me()]) o[pid] = m[me()]; }); return o; },
       async vote(pid, choice) {
+        const pl = db().polls[pid];
+        if (pl && pl.endsAt && now() > pl.endsAt) throw new Error("마감된 투표예요");
         db().votes[pid] = db().votes[pid] || {};
         if (db().votes[pid][me()]) return;
         db().votes[pid][me()] = choice; save();
@@ -198,7 +201,8 @@
       async listPosts() { return Object.values(db().posts).sort((a, b) => b.createdAt - a.createdAt); },
       async approvePost(id) {
         const D = db(), p = D.posts[id]; if (!p) return;
-        if (p.type === "vote") { D.polls[id] = { id, cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now() }; p.pollId = id; }
+        const endsAt = p.type === "vote" && p.durationH ? now() + p.durationH * 3600e3 : null;
+        if (p.type === "vote") { D.polls[id] = { id, cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now(), endsAt }; p.pollId = id; p.endsAt = endsAt; }
         p.status = "approved"; p.approvedAt = now(); save();
       },
       async rejectPost(id, reason) { const p = db().posts[id]; if (p) { p.status = "rejected"; p.rejectReason = reason || ""; p.rejectedAt = now(); save(); } },
@@ -409,8 +413,9 @@
       async approvePost(id) {
         const s = await getDoc(doc(fs, "posts", id)); if (!s.exists()) return;
         const p = s.data();
-        if (p.type === "vote") await setDoc(doc(fs, "polls", id), { cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now() });
-        await updateDoc(doc(fs, "posts", id), { status: "approved", pollId: p.type === "vote" ? id : null, approvedAt: now() });
+        const endsAt = p.type === "vote" && p.durationH ? now() + p.durationH * 3600e3 : null;
+        if (p.type === "vote") await setDoc(doc(fs, "polls", id), { cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now(), endsAt });
+        await updateDoc(doc(fs, "posts", id), { status: "approved", pollId: p.type === "vote" ? id : null, approvedAt: now(), endsAt });
       },
       async rejectPost(id, reason) { await updateDoc(doc(fs, "posts", id), { status: "rejected", rejectReason: reason || "", rejectedAt: now() }); },
       async myReactions() {
