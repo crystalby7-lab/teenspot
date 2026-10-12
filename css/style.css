@@ -613,3 +613,84 @@ a.tag.lg { text-decoration: none; }
 .pv-hint b { color: var(--accent); font-weight: 700; }
 .search-box input, .search-box input:focus, .search-box input:focus-visible { border: 0; outline: none; box-shadow: none; border-radius: 0; }
 .map-link { display: flex; width: fit-content; }
+
+/* ---------- 투표 선택지 2~4개 ---------- */
+.pv-grid.n3 { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pv-grid.n3 .pv-res b { font-size: 22px; }
+.pv-grid.n3 .pv-label { font-size: 12.5px; padding: 22px 8px 9px; }
+.pv-grid.n4 .pv-opt { aspect-ratio: 1; }
+.pv-grid.done .pv-opt.win .pv-res b { color: #fff; }
+.pv-grid.done .pv-opt.win::after { background: rgba(23, 32, 51, .25); }
+.pv-list { display: flex; flex-direction: column; gap: 8px; }
+.pv-row { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 0 16px 0 10px; border: 0; border-radius: 14px; background: var(--navy-50); text-align: left; overflow: hidden; isolation: isolate; transition: transform .12s var(--ease), background .15s; }
+button.pv-row:active { transform: scale(.985); background: var(--navy-100); }
+.pv-row.picked { box-shadow: inset 0 0 0 2px var(--navy); }
+.pv-key { width: 30px; height: 30px; flex: none; border-radius: 10px; background: var(--card); color: var(--navy-500); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.pv-row b { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-row small { flex: none; font-size: 11.5px; font-weight: 700; color: var(--navy); background: var(--card); padding: 2px 7px; border-radius: 7px; }
+.pv-row em { flex: none; font-style: normal; font-size: 15px; font-weight: 700; color: var(--sub); min-width: 40px; text-align: right; }
+.pv-fill { position: absolute; z-index: -1; left: 0; top: 0; bottom: 0; background: var(--navy-100); border-radius: 0 10px 10px 0; animation: grow .6s var(--ease) both; transform-origin: left; }
+.pv-row.win .pv-fill { background: var(--navy-200); }
+.pv-row.win em { color: var(--navy); }
+.pv-row.mine .pv-key { background: var(--navy); color: #fff; }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.poll-body { padding: 0; margin-top: 4px; }
+.poll-body .pv-row { background: var(--card); min-height: 60px; }
+.poll-body .pv-key { background: var(--navy-50); }
+.poll-body .pv-fill { background: var(--navy-100); }
+.poll-body .pv-hint { margin-top: 14px; }
+.verdict { text-align: center; font-weight: 700; color: var(--ink); margin: 18px 0 14px; }
+
+/* 투표 카드 미리보기 */
+.pc-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.pc-opts span { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 6px; border-radius: 11px; background: var(--navy-50); font-size: 13.5px; font-weight: 700; color: var(--sub); max-width: 100%; }
+.pc-opts em { width: 22px; height: 22px; border-radius: 7px; background: var(--card); display: grid; place-items: center; font-style: normal; font-size: 11.5px; color: var(--navy-500); flex: none; }
+.pc-thumbs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.pc-thumbs.n3 { grid-template-columns: repeat(3, 1fr); }
+.pc-thumbs.n4 { grid-template-columns: repeat(4, 1fr); }
+.pc-thumbs div { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--navy-50); }
+.pc-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pc-thumbs span { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 8px 7px; font-size: 11.5px; font-weight: 700; color: #fff; background: linear-gradient(to top, rgba(23, 32, 51, .65), transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 카테고리 가로 스크롤 */
+.cat-row { display: flex; gap: 6px; overflow-x: auto; margin: 8px -16px 14px; padding: 0 16px; scrollbar-width: none; }
+.cat-row::-webkit-scrollbar { display: none; }
+.cat-row .chip { flex: none; height: 36px; padding: 0 14px; background: var(--card); }
+.cat-row .chip.on { background: var(--navy); }
+
+/* 글자 썸네일 */
+.txt-tile { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 4px; padding: 12px; background: var(--navy); color: #fff; text-align: left; }
+.txt-tile small { font-size: 11px; font-weight: 700; color: var(--navy-300); }
+.txt-tile b { font-size: 14px; font-weight: 700; line-height: 1.35; letter-spacing: -0.03em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.txt-tile span { margin-top: auto; font-size: 11px; font-weight: 600; color: var(--navy-300); }
+.strip-item .txt-tile { width: 112px; height: 140px; border-radius: var(--r-md); }
+.strip-item .txt-tile span { color: var(--navy-300); white-space: normal; font-size: 11px; }
+.thumb-grid .txt-tile { padding: 10px; }
+.thumb-grid .txt-tile b { font-size: 12.5px; }
+
+/* 투표 올리기: 선택지 편집 */
+.nv-opts { display: flex; flex-direction: column; gap: 8px; }
+.nv-opt { display: flex; align-items: center; gap: 8px; }
+.nv-opt[hidden] { display: none; }
+.nv-opt input:not([type]) { height: 52px; }
+.nv-photo { width: 52px; height: 52px; flex: none; border: 1.5px dashed var(--navy-200); border-radius: var(--r-sm); background: var(--card); color: var(--navy-500); display: grid; place-items: center; padding: 0; overflow: hidden; }
+.nv-photo.filled { border: 0; }
+.nv-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nv-del { flex: none; color: var(--muted); }
+.nv-add { display: flex; align-items: center; justify-content: center; gap: 6px; height: 48px; border: 0; border-radius: var(--r-sm); background: transparent; box-shadow: inset 0 0 0 1.5px var(--navy-200); color: var(--sub); font-weight: 700; font-size: 14px; }
+.nv-add[hidden] { display: none; }
+.nv-add:active { background: var(--navy-50); }
+
+/* 숫자 0 숨김 */
+.like span:empty, .pchip em:empty { display: none; }
+.cc-rec.new { font-size: 11.5px; font-weight: 700; color: var(--navy-700); background: var(--navy-50); padding: 2px 7px; border-radius: 7px; }
+
+/* 마이: 활동 */
+.me-stats { margin-top: 10px; }
+.act-list .hist { width: 100%; border: 0; background: none; text-align: left; font: inherit; color: inherit; }
+.act-list .hist + .hist { box-shadow: inset 0 1px 0 var(--line); }
+.act-ic { width: 36px; height: 36px; flex: none; border-radius: 12px; background: var(--navy-50); color: var(--navy); display: grid; place-items: center; }
+.pts-badge { flex: none; font-size: 12.5px; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 3px 8px; border-radius: 8px; }
+.bell-dot[hidden] { display: none; }
+.strip { scroll-padding-inline: 16px; }
+.review-imgs:empty { display: none; }

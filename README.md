@@ -18,7 +18,7 @@ js/icons.js             선 아이콘
 js/brand.js             마스코트 '스팟이'(보영 원본 그림)와 워드마크
 js/avatar.js            아바타 캐릭터 (부위별 옵션 → SVG)
 js/app.js               화면 31개, 라우터
-js/seed.js              서대문구 예시 코스 8개, 투표 9개
+js/seed.js              서대문구 예시 코스 8개, 결정 투표 12개
 js/legal.js             약관 초안 4종
 js/style-images.js      STYLE 투표 이미지 목록
 images/style/           STYLE 투표 이미지 폴더
@@ -55,5 +55,7 @@ manifest.webmanifest    홈 화면 추가용
 
 - Firebase Storage는 유료 요금제가 필요해서, 사진을 폰에서 압축한 뒤 Firestore `images` 컬렉션에 저장해요 (장당 약 200KB 이하)
 - 게시물은 `posts` 컬렉션에 `pending`으로 저장되고, 관리자 승인 후 `approved`로 피드에 공개돼요
-- 투표 게시물은 승인 시 `polls`에도 같은 ID로 만들어져 STYLE 탭에 함께 나와요
+- 투표 게시물은 승인 시 `polls`에도 같은 ID로 만들어져 투표 탭에 함께 나와요
+- 투표 선택지는 `a`, `b`(필수), `c`, `d`(선택). 사진은 모든 선택지에 넣거나 모두 빼요
+- 카테고리: outfit 옷, makeup 화장, hair 머리, food 음식, play 놀거리, etc 기타
 - `firestore.rules`가 바뀌면 Firebase 콘솔 규칙 탭에 다시 붙여넣고 게시해야 해요

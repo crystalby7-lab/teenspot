@@ -84,7 +84,7 @@ service cloud.firestore {
       match /votes/{uid} {
         allow read: if signedIn();
         allow create: if hasProfile() && isMe(uid)
-          && request.resource.data.choice in ['a', 'b']
+          && request.resource.data.choice in ['a', 'b', 'c', 'd']
           && (get(/databases/$(database)/documents/polls/$(pid)).data.get('endsAt', null) == null
               || request.time.toMillis() < get(/databases/$(database)/documents/polls/$(pid)).data.endsAt);
         allow delete: if isMe(uid) || isAdmin()

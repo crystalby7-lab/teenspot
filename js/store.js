@@ -2,6 +2,7 @@
 (function () {
   const CFG = window.TS_CONFIG || {};
   const SEED = window.TS_SEED || { courses: [], polls: [] };
+  const SEED_V = 2; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
   const useFirebase = !!(CFG.firebase && CFG.firebase.apiKey);
   const now = () => Date.now();
   const rid = () => Math.random().toString(36).slice(2, 9) + now().toString(36);
@@ -13,12 +14,23 @@
     const total = (course.stops || []).reduce((s, x) => s + (Number(x.cost) || 0), 0);
     return { ...course, total, reviewCount: rs.length, recCount: rec, avgSpent: spent };
   }
+  // 투표 선택지: a, b는 필수, c, d는 선택
+  const OPT_KEYS = ["a", "b", "c", "d"];
+  const optKeys = p => OPT_KEYS.filter(k => p[k] && p[k].label);
+  function pollFields(p) {
+    const o = { cat: p.cat, question: p.question };
+    optKeys(p).forEach(k => (o[k] = { label: p[k].label, img: p[k].img || "" }));
+    return o;
+  }
+  function countChoices(arr) { const r = { total: arr.length }; OPT_KEYS.forEach(k => (r[k] = arr.filter(x => x === k).length)); return r; }
   function cleanPost(p) {
     const out = { type: p.type === "vote" ? "vote" : "review", text: String(p.text || "").slice(0, 100) };
     if (out.type === "vote") {
       out.cat = p.cat; out.question = String(p.question || "").slice(0, 30);
-      out.a = { label: String(p.a.label || "").slice(0, 15), img: p.a.img };
-      out.b = { label: String(p.b.label || "").slice(0, 15), img: p.b.img };
+      OPT_KEYS.forEach((k, i) => {
+        const o = p[k];
+        if (i < 2 || (o && String(o.label || "").trim())) out[k] = { label: String((o && o.label) || "").slice(0, 15), img: (o && o.img) || "" };
+      });
       out.durationH = [24, 72, 168, 0].includes(Number(p.durationH)) ? Number(p.durationH) : 72;
     } else {
       out.courseId = p.courseId; out.courseTitle = p.courseTitle || "";
@@ -32,7 +44,7 @@
     const mine = arr.find(r => r.uid === uid) || null;
     return { ...p, likes: arr.filter(r => r.like).length, praise, myLike: !!(mine && mine.like), myPraise: mine ? mine.praise || null : null };
   }
-  const postImageRefs = p => (p.type === "vote" ? [p.a && p.a.img, p.b && p.b.img] : p.images || []).filter(r => typeof r === "string" && r.indexOf("img:") === 0).map(r => r.slice(4));
+  const postImageRefs = p => (p.type === "vote" ? OPT_KEYS.map(k => p[k] && p[k].img) : p.images || []).filter(r => typeof r === "string" && r.indexOf("img:") === 0).map(r => r.slice(4));
   const byNewest = (a, b) => (b.approvedAt || b.createdAt || 0) - (a.approvedAt || a.createdAt || 0);
 
   function cleanPublic(p) {
@@ -67,7 +79,7 @@
       const courses = {}, polls = {};
       SEED.courses.forEach(c => { courses[c.id] = { ...cleanCourse(c), id: c.id, createdAt: now() }; });
       SEED.polls.forEach((p, i) => { polls[p.id] = { ...p, createdAt: now() - i }; });
-      return { authUid: null, users: {}, nicknames: {}, courses, reviews: {}, polls, votes: {}, saves: {}, submissions: {}, reports: {}, images: {}, posts: seedPosts(), reactions: {}, publics: seedPublics() };
+      return { authUid: null, users: {}, nicknames: {}, courses, reviews: {}, polls, votes: {}, saves: {}, submissions: {}, reports: {}, images: {}, posts: seedPosts(), reactions: {}, publics: seedPublics(), seedV: SEED_V };
     }
     function seedPublics() { return JSON.parse(JSON.stringify(SEED.publicProfiles || {})); }
     function seedPosts() {
@@ -80,7 +92,16 @@
       try { const raw = localStorage.getItem(KEY); if (raw) d = JSON.parse(raw); } catch (e) {}
       if (!d) d = fresh();
       if (!d.publics) d.publics = seedPublics();
-      if (!d.posts) { d.posts = seedPosts(); d.images = d.images || {}; d.reactions = d.reactions || {}; SEED.polls.forEach(p => { if (d.polls[p.id]) d.polls[p.id] = { ...d.polls[p.id], a: p.a, b: p.b }; }); }
+      if (!d.posts) { d.posts = seedPosts(); d.images = d.images || {}; d.reactions = d.reactions || {}; }
+      if (d.seedV !== SEED_V) {
+        // 예시 투표·게시물을 새 버전으로 교체 (사용자가 만든 것은 유지)
+        const isSeed = id => /^(poll|q)-/.test(id);
+        ["polls", "posts", "votes", "reactions"].forEach(c => Object.keys(d[c] || {}).forEach(id => { if (isSeed(id)) delete d[c][id]; }));
+        const t = now();
+        SEED.polls.forEach((p, i) => { d.polls[p.id] = { ...p, createdAt: t - i * 60e3 }; });
+        Object.assign(d.posts, seedPosts());
+        d.seedV = SEED_V; save();
+      }
       return d;
     }
     function save() { try { localStorage.setItem(KEY, JSON.stringify(d)); return true; } catch (e) { return false; } }
@@ -136,7 +157,7 @@
         if (db().votes[pid][me()]) return;
         db().votes[pid][me()] = choice; save();
       },
-      async pollResult(pid) { const v = Object.values(db().votes[pid] || {}); return { a: v.filter(x => x === "a").length, b: v.filter(x => x === "b").length }; },
+      async pollResult(pid) { return countChoices(Object.values(db().votes[pid] || {})); },
       async getSaves() { const s = db().saves[me()] || {}; return Object.values(s); },
       async toggleSave(type, id) {
         const s = (db().saves[me()] = db().saves[me()] || {});
@@ -202,7 +223,7 @@
       async approvePost(id) {
         const D = db(), p = D.posts[id]; if (!p) return;
         const endsAt = p.type === "vote" && p.durationH ? now() + p.durationH * 3600e3 : null;
-        if (p.type === "vote") { D.polls[id] = { id, cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now(), endsAt }; p.pollId = id; p.endsAt = endsAt; }
+        if (p.type === "vote") { D.polls[id] = { id, ...pollFields(p), uid: p.uid, nickname: p.nickname, createdAt: now(), endsAt }; p.pollId = id; p.endsAt = endsAt; }
         p.status = "approved"; p.approvedAt = now(); save();
       },
       async rejectPost(id, reason) { const p = db().posts[id]; if (p) { p.status = "rejected"; p.rejectReason = reason || ""; p.rejectedAt = now(); save(); } },
@@ -224,7 +245,7 @@
       async deleteCourse(id) { delete db().courses[id]; delete db().reviews[id]; save(); },
       async savePoll(p) {
         const id = p.id || rid();
-        db().polls[id] = { ...(db().polls[id] || { createdAt: now() }), id, cat: p.cat, question: p.question, a: p.a, b: p.b };
+        db().polls[id] = { ...(db().polls[id] || { createdAt: now() }), id, ...pollFields(p) };
         save(); return id;
       },
       async deletePoll(id) { delete db().polls[id]; delete db().votes[id]; save(); },
@@ -243,7 +264,7 @@
     const app = App.initializeApp(CFG.firebase);
     const auth = A.getAuth(app);
     const fs = F.getFirestore(app);
-    const { doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, collection, collectionGroup, query, where, getCountFromServer } = F;
+    const { doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, collection, collectionGroup, query, where, getCountFromServer, deleteField } = F;
     const provider = new A.GoogleAuthProvider();
     const me = () => auth.currentUser && auth.currentUser.uid;
     const list = snap => snap.docs.map(x => ({ ...x.data(), id: x.id }));
@@ -339,8 +360,9 @@
       },
       async pollResult(pid) {
         const c = collection(fs, "polls", pid, "votes");
-        const [a, b] = await Promise.all([getCountFromServer(query(c, where("choice", "==", "a"))), getCountFromServer(query(c, where("choice", "==", "b")))]);
-        return { a: a.data().count, b: b.data().count };
+        const n = await Promise.all(OPT_KEYS.map(k => getCountFromServer(query(c, where("choice", "==", k)))));
+        const r = { total: 0 }; OPT_KEYS.forEach((k, i) => { r[k] = n[i].data().count; r.total += r[k]; });
+        return r;
       },
       async getSaves() { return list(await getDocs(collection(fs, "users", me(), "saves"))); },
       async toggleSave(type, id) {
@@ -414,7 +436,7 @@
         const s = await getDoc(doc(fs, "posts", id)); if (!s.exists()) return;
         const p = s.data();
         const endsAt = p.type === "vote" && p.durationH ? now() + p.durationH * 3600e3 : null;
-        if (p.type === "vote") await setDoc(doc(fs, "polls", id), { cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now(), endsAt });
+        if (p.type === "vote") await setDoc(doc(fs, "polls", id), { ...pollFields(p), uid: p.uid, nickname: p.nickname, createdAt: now(), endsAt });
         await updateDoc(doc(fs, "posts", id), { status: "approved", pollId: p.type === "vote" ? id : null, approvedAt: now(), endsAt });
       },
       async rejectPost(id, reason) { await updateDoc(doc(fs, "posts", id), { status: "rejected", rejectReason: reason || "", rejectedAt: now() }); },
@@ -443,8 +465,12 @@
         await deleteDoc(doc(fs, "courses", id)); dirty();
       },
       async savePoll(p) {
-        const data = { cat: p.cat, question: p.question, a: p.a, b: p.b };
-        if (p.id) { await setDoc(doc(fs, "polls", p.id), data, { merge: true }); return p.id; }
+        const data = pollFields(p);
+        if (p.id) {
+          // 뺀 선택지(c, d)는 지워요
+          OPT_KEYS.forEach(k => { if (!data[k]) data[k] = deleteField(); });
+          await setDoc(doc(fs, "polls", p.id), data, { merge: true }); return p.id;
+        }
         const r = await addDoc(collection(fs, "polls"), { ...data, createdAt: now() }); return r.id;
       },
       async deletePoll(id) {
@@ -457,7 +483,7 @@
       async importSeed() {
         const t = now();
         await Promise.all(SEED.courses.map(c => setDoc(doc(fs, "courses", c.id), { ...cleanCourse(c), createdAt: t })));
-        await Promise.all(SEED.polls.map((p, i) => setDoc(doc(fs, "polls", p.id), { cat: p.cat, question: p.question, a: p.a, b: p.b, createdAt: t - i })));
+        await Promise.all(SEED.polls.map((p, i) => setDoc(doc(fs, "polls", p.id), { ...pollFields(p), createdAt: t - i })));
         await Promise.all(Object.entries(SEED.publicProfiles || {}).map(([u, pp]) => setDoc(doc(fs, "publicProfiles", u), { ...pp, uid: u, updatedAt: t })));
         await Promise.all((SEED.posts || []).map((p, i) => setDoc(doc(fs, "posts", p.id), { ...p, status: "approved", pollId: p.type === "vote" ? p.id : null, createdAt: t - (i + 1) * 3600e3, approvedAt: t - (i + 1) * 3600e3 })));
       }
