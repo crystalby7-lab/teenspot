@@ -43,6 +43,7 @@
     if (p.styleTags) out.styleTags = p.styleTags.slice(0, 3);
     if (p.playTags) out.playTags = p.playTags.slice(0, 3);
     if (p.personalColor != null) out.personalColor = p.personalColor;
+    if (p.badge != null) out.badge = String(p.badge).slice(0, 20);
     return out;
   }
 

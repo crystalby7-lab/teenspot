@@ -39,6 +39,7 @@
     camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
     image: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="9.5" r="1.6"/><path d="M20.5 15.5 15 10l-8 9.5"/>',
     grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    coin: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M14.5 9.3c-.6-.8-1.5-1.1-2.5-1.1-1.4 0-2.5.7-2.5 1.8 0 2.6 5.2 1.4 5.2 4 0 1.1-1.2 1.9-2.7 1.9-1.1 0-2.1-.4-2.7-1.2"/>',
     logout: '<path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4"/><path d="M6 12h10"/>'
   };
   window.ic = function (name, size, cls) {

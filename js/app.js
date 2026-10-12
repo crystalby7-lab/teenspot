@@ -186,6 +186,7 @@
         return screenPost(t, p[1]);
       case "me": return p[1] === "edit" ? screenMeEdit(t) : p[1] === "style" ? screenAvatarEdit(t) : screenMe(t);
       case "u": return screenUser(t, p[1]);
+      case "points": return screenPoints(t);
       case "settings": return screenSettings(t);
       case "withdraw": return screenWithdraw(t);
       case "admin": return screenAdmin(t, p, q);
@@ -523,6 +524,7 @@
       </section>
       <a class="cta-card" href="#/submit"><span class="cta-ic">${ic("send", 20)}</span><div><b>나만 아는 코스가 있어요</b><p class="muted tiny">제보하면 승인 후 모두에게 보여져요</p></div>${ic("chev", 18, "chev")}</a>
     `, "home"));
+    syncRewards();
   }
 
   /* =========================================================
@@ -656,7 +658,7 @@
         if (rec === null) return toast("추천 여부를 골라주세요");
         if (text.length < 5) return toast("한 줄 후기를 5자 이상 써주세요");
         e.currentTarget.disabled = true;
-        try { await S.store.saveReview(id, { date, spent: Math.round(Number(spentRaw)), recommend: rec, text }); toast("후기를 남겼어요"); back(); }
+        try { await S.store.saveReview(id, { date, spent: Math.round(Number(spentRaw)), recommend: rec, text }); const got = mine ? 0 : await award("review", id); toast(got ? `후기를 남겼어요 +${got}P` : "후기를 남겼어요"); back(); }
         catch (er) { toast("저장에 실패했어요"); e.currentTarget.disabled = false; }
       };
       const del = $app.querySelector("#del");
@@ -784,7 +786,7 @@
         bindCommon();
         $app.querySelectorAll("[data-v]").forEach(b => (b.onclick = async () => {
           $app.querySelectorAll("[data-v]").forEach(x => (x.disabled = true)); b.classList.add("picked");
-          try { await S.store.vote(id, b.dataset.v); render(); } catch (e) { toast("투표에 실패했어요"); $app.querySelectorAll("[data-v]").forEach(x => (x.disabled = false)); }
+          try { await S.store.vote(id, b.dataset.v); const got = await award("vote", id); if (got) toast(`투표 완료 +${got}P`); render(); } catch (e) { toast("투표에 실패했어요"); $app.querySelectorAll("[data-v]").forEach(x => (x.disabled = false)); }
         }));
       });
       return;
@@ -919,6 +921,7 @@
         pv.querySelectorAll("[data-pick]").forEach(x => (x.disabled = true)); b.classList.add("picked");
         try {
           await S.store.vote(p.pollId, choice);
+          award("vote", p.pollId).then(got => { if (got) toast(`투표 완료 +${got}P`); });
           ctx.votes[p.pollId] = choice;
           const r = await S.store.pollResult(p.pollId);
           pv.innerHTML = voteAreaHtml(p, choice, r); hydrateImages(pv);
@@ -1085,14 +1088,14 @@
   function authorLine(pub, fallbackNick) {
     const nick = (pub && pub.nickname) || fallbackNick || "알 수 없음";
     const age = ageOf(pub);
-    return `<b>${esc(nick)}</b>${pub && pub.official ? `<span class="badge-official">공식</span>` : age ? `<span class="age-chip">${age}살</span>` : ""}`;
+    return `<b>${esc(nick)}</b>${pub && pub.official ? `<span class="badge-official">공식</span>` : age ? `<span class="age-chip">${age}살</span>` : ""}${badgeOf(pub)}`;
   }
   async function ensurePublic() {
     try {
       S.pub = await S.store.getPublicProfile();
       if (!S.pub && S.profile) {
         const p = S.profile;
-        await S.store.savePublicProfile({ nickname: p.nickname, birthYear: p.birthYear, birthMonth: p.birthMonth, avatar: window.TSAvatar.random(), styleTags: [], playTags: [], personalColor: "" });
+        await S.store.savePublicProfile({ nickname: p.nickname, birthYear: p.birthYear, birthMonth: p.birthMonth, avatar: window.TSAvatar.random(new Set()), styleTags: [], playTags: [], personalColor: "" });
         S.pub = await S.store.getPublicProfile();
       }
     } catch (e) { console.error(e); }
@@ -1111,7 +1114,7 @@
       <section class="pp-head">
         ${avatarHtml(pub, 96, "lg")}
         <h1>${esc(pub.nickname)}</h1>
-        <div class="pp-meta">${pub.official ? `<span class="badge-official">공식</span>` : age ? `<span class="age-chip">${age}살</span>` : ""}${pub.personalColor ? `<span class="pc-chip ${esc(pub.personalColor)}">${pcLabel(pub.personalColor)}</span>` : ""}</div>
+        <div class="pp-meta">${pub.official ? `<span class="badge-official">공식</span>` : age ? `<span class="age-chip">${age}살</span>` : ""}${pub.personalColor ? `<span class="pc-chip ${esc(pub.personalColor)}">${pcLabel(pub.personalColor)}</span>` : ""}${badgeOf(pub)}</div>
         <div class="pp-stats"><div><b>${posts.length}</b><span>게시물</span></div><div><b>${likes}</b><span>받은 좋아요</span></div></div>
       </section>
       <section class="card pp-tags">
@@ -1131,25 +1134,99 @@
       };
     });
   }
+  // 조사: 받침 유무에 따라 을/를, 은/는, 이/가
+  function josa(word, pair) {
+    const ch = String(word).trim().slice(-1), code = ch.charCodeAt(0) - 0xAC00;
+    const hasFinal = code >= 0 && code <= 11171 ? code % 28 !== 0 : /[0-9LMNRlmnr]$/.test(ch);
+    const [withF, without] = pair.split("/");
+    return word + (hasFinal ? withF : without);
+  }
+  /* ---------- 포인트 ---------- */
+  const EARN = { checkin: [10, "출석 체크"], vote: [2, "투표 참여"], review: [10, "후기 작성"], post: [20, "게시물 공개"], sub: [30, "코스 제보 공개"] };
+  const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const pts = () => (S.profile && S.profile.points) || 0;
+  const ownedSet = () => new Set((S.profile && S.profile.owned) || []);
+  async function savePts(upd) { Object.assign(S.profile, upd); try { await S.store.saveProfile(upd); } catch (e) { console.error(e); } }
+  async function award(type, id) {
+    if (!S.profile) return 0;
+    const key = type + ":" + id, rw = S.profile.rewards || {};
+    if (rw[key]) return 0;
+    const [amt, label] = EARN[type];
+    await savePts({ points: pts() + amt, rewards: { ...rw, [key]: Date.now() }, pointLog: [{ label, amt, at: Date.now() }, ...(S.profile.pointLog || [])].slice(0, 30) });
+    return amt;
+  }
+  async function spend(itemKey, price, label) {
+    if (pts() < price) return false;
+    const owned = [...ownedSet(), itemKey];
+    await savePts({ points: pts() - price, owned, pointLog: [{ label: label + " 열기", amt: -price, at: Date.now() }, ...(S.profile.pointLog || [])].slice(0, 30) });
+    return true;
+  }
+  async function grantFree(itemKey) { if (!ownedSet().has(itemKey)) await savePts({ owned: [...ownedSet(), itemKey] }); }
+  // 출석, 공개된 게시물·제보 보상을 한 번에 확인
+  async function syncRewards() {
+    if (S.rewardSynced || !S.profile) return;
+    S.rewardSynced = true;
+    let total = 0;
+    const checkin = await award("checkin", todayStr());
+    try {
+      const [posts, subs] = await Promise.all([S.store.myPosts(), S.store.mySubmissions()]);
+      for (const p of posts) if (p.status === "approved") total += await award("post", p.id);
+      for (const s of subs) if (s.status === "approved") total += await award("sub", s.id);
+    } catch (e) {}
+    if (checkin && total) toast(`출석 체크 +${checkin}P · 공개 보상 +${total}P`);
+    else if (checkin) toast(`출석 체크 +${checkin}P`);
+    else if (total) toast(`게시물 공개 보상 +${total}P`);
+  }
+  const ptsChip = () => `<a class="pts-chip" href="#/points" aria-label="내 포인트">${ic("coin", 16)}<b class="num">${pts().toLocaleString("ko-KR")}P</b></a>`;
+  function badgeOf(pub) { const b = window.TSAvatar.BADGES.find(x => x.id && x.id === (pub && pub.badge)); return b ? `<span class="badge-item">${esc(b.label)}</span>` : ""; }
+  function screenPoints(t) {
+    const log = (S.profile.pointLog || []);
+    paint(t, page(`
+      ${header("포인트", { back: true })}
+      <section class="pts-hero">
+        <p>내 포인트</p>
+        <b class="num">${pts().toLocaleString("ko-KR")}P</b>
+        <a class="btn light sm" href="#/me/style">꾸미기 아이템 보러 가기</a>
+      </section>
+      <section>
+        <div class="sec-head"><h2>모으는 방법</h2></div>
+        <div class="group earn-list">${Object.entries(EARN).map(([k, [amt, label]]) => `<div class="earn-row"><span>${label}${k === "checkin" ? " (하루 1번)" : k === "vote" ? " (투표마다)" : ""}</span><b class="num">+${amt}P</b></div>`).join("")}</div>
+      </section>
+      <section>
+        <div class="sec-head"><h2>최근 내역</h2></div>
+        ${log.length ? `<div class="group earn-list">${log.map(x => `<div class="earn-row"><span>${esc(x.label)}<small>${ago(x.at)}</small></span><b class="num ${x.amt < 0 ? "minus" : ""}">${x.amt > 0 ? "+" : ""}${x.amt}P</b></div>`).join("")}</div>` : emptyHtml("coin", "아직 내역이 없어요", "출석 체크와 투표로 첫 포인트를 모아보세요")}
+      </section>
+      <p class="tiny muted mt">포인트는 TeenSpot 안에서 꾸미기 아이템을 여는 데만 쓰여요. 현금으로 바꾸거나 사고팔 수 없어요</p>
+    `));
+  }
+
   function screenAvatarEdit(t) {
     const A = window.TSAvatar, O = A.OPTIONS, L = A.LABELS;
     const pub = S.pub || {};
-    const st = { avatar: A.norm(pub.avatar), styleTags: [...(pub.styleTags || [])], playTags: [...(pub.playTags || [])], personalColor: pub.personalColor || "", tab: "hair" };
-    const TABS = [["hair", "머리"], ["face", "얼굴"], ["acc", "소품"], ["color", "색"]];
-    const swatches = (key, list) => `<div class="sw-row">${list.map((c, i) => `<button class="sw ${st.avatar[key] === i ? "on" : ""}" data-k="${key}" data-v="${i}" style="background:${c}" aria-label="${key} ${i + 1}"></button>`).join("")}</div>`;
-    const opts = (key) => `<div class="opt-grid">${O[key].map(v => { const cfg = { ...st.avatar, [key]: v }; return `<button class="opt ${String(st.avatar[key]) === String(v) ? "on" : ""}" data-k="${key}" data-v="${v}">${A.render(cfg, 56)}<span>${L[key][v]}</span></button>`; }).join("")}</div>`;
+    const st = { avatar: A.norm(pub.avatar), badge: pub.badge || "", styleTags: [...(pub.styleTags || [])], playTags: [...(pub.playTags || [])], personalColor: pub.personalColor || "", tab: "hair" };
+    const TABS = [["hair", "머리"], ["face", "얼굴"], ["top", "옷"], ["acc", "소품"], ["deco", "배경"]];
+    const lockTag = (k, v) => {
+      const owned = ownedSet();
+      if (A.isOwned(k, v, owned)) return "";
+      const ev = A.eventOf(k, v);
+      return ev ? `<em class="lock ev">${esc(ev.label)}</em>` : `<em class="lock">${ic("lock", 11)}${A.priceOf(k, v)}P</em>`;
+    };
+    const swatches = (key) => `<div class="sw-row">${O[key].map((c, i) => A.isVisible(key, i, ownedSet()) ? `<button class="sw ${st.avatar[key] === i ? "on" : ""} ${A.isOwned(key, i, ownedSet()) ? "" : "locked"}" data-k="${key}" data-v="${i}" style="background:${c}" aria-label="${key} ${i + 1}">${A.isOwned(key, i, ownedSet()) ? "" : ic("lock", 13)}</button>` : "").join("")}</div>`;
+    const opts = (key) => `<div class="opt-grid">${O[key].filter(v => A.isVisible(key, v, ownedSet())).map(v => { const cfg = { ...st.avatar, [key]: v }; return `<button class="opt ${String(st.avatar[key]) === String(v) ? "on" : ""}" data-k="${key}" data-v="${v}">${A.render(cfg, 56)}<span>${L[key][v]}</span>${lockTag(key, v)}</button>`; }).join("")}</div>`;
+    const badges = () => `<div class="chips" id="badges">${A.BADGES.filter(b => !b.event || A.eventActive(b.event) || ownedSet().has("badge:" + b.id)).map(b => { const own = !b.id || (!b.price && !b.event) || ownedSet().has("badge:" + b.id); return `<button class="chip ${st.badge === b.id ? "on" : ""}" data-badge="${b.id}">${esc(b.label)}${own ? "" : b.event ? ` <small>${esc(b.event.label)}</small>` : ` <small>${ic("lock", 11)}${b.price}P</small>`}</button>`; }).join("")}</div>`;
     const panel = () => {
       switch (st.tab) {
-        case "hair": return `<p class="pl">머리 모양</p>${opts("hair")}<p class="pl">머리 색</p>${swatches("hairColor", O.hairColor)}`;
-        case "face": return `<p class="pl">피부 톤</p>${swatches("skin", O.skin)}<p class="pl">눈</p>${opts("eyes")}<p class="pl">입</p>${opts("mouth")}<p class="pl">볼</p>${opts("cheek")}`;
+        case "hair": return `<p class="pl">머리 모양</p>${opts("hair")}<p class="pl">머리 색</p>${swatches("hairColor")}`;
+        case "face": return `<p class="pl">피부 톤</p>${swatches("skin")}<p class="pl">눈</p>${opts("eyes")}<p class="pl">눈썹</p>${opts("brows")}<p class="pl">속눈썹</p>${opts("lashes")}<p class="pl">입</p>${opts("mouth")}<p class="pl">볼</p>${opts("cheek")}<p class="pl">주근깨·점</p>${opts("mark")}`;
+        case "top": return `<p class="pl">옷 종류</p>${opts("top")}<p class="pl">옷 색</p>${swatches("shirt")}`;
         case "acc": return `<p class="pl">소품</p>${opts("acc")}`;
-        default: return `<p class="pl">옷 색</p>${swatches("shirt", O.shirt)}<p class="pl">배경 색</p>${swatches("bg", O.bg)}`;
+        default: return `<p class="pl">배경 색</p>${swatches("bg")}<p class="pl">배경 무늬</p>${opts("pattern")}<p class="pl">프로필 테두리</p>${opts("frame")}<p class="pl">닉네임 옆 배지</p>${badges()}`;
       }
     };
     const tagPicker = (id, list, sel) => `<div class="chips" id="${id}">${list.map(x => `<button class="chip ${sel.includes(x) ? "on" : ""}" data-t="${esc(x)}">${esc(x)}</button>`).join("")}</div>`;
     paint(t, page(`
-      ${header("프로필 꾸미기", { back: true })}
-      <section class="av-stage"><div id="preview">${avatarHtml({ avatar: st.avatar }, 132, "lg")}</div><button class="btn ghost sm" id="rand">랜덤</button></section>
+      ${header("프로필 꾸미기", { back: true, right: ptsChip() })}
+      <section class="av-stage"><div id="preview">${avatarHtml({ avatar: st.avatar }, 132, "lg")}</div><div id="badge-prev" class="badge-prev">${badgeOf({ badge: st.badge })}</div><button class="btn ghost sm" id="rand">랜덤</button></section>
       <div class="seg" id="tabs">${TABS.map(([k, l]) => `<a href="javascript:void 0" data-tab="${k}" class="${k === st.tab ? "on" : ""}">${l}</a>`).join("")}</div>
       <div class="card av-panel" id="panel">${panel()}</div>
       <div class="field"><span>추구미 <small class="muted">최대 3개</small></span>${tagPicker("style", STYLE_TAGS, st.styleTags)}</div>
@@ -1158,18 +1235,43 @@
       <p class="hint mt">프로필에는 닉네임, 아바타, 나이, 고른 태그만 보여요. 지역과 이메일은 공개되지 않아요</p>
       <div class="bottom-cta"><button class="btn block lg" id="ok">저장</button></div>
     `), () => {
-      const preview = () => ($app.querySelector("#preview").innerHTML = avatarHtml({ avatar: st.avatar }, 132, "lg"));
+      const preview = () => { $app.querySelector("#preview").innerHTML = avatarHtml({ avatar: st.avatar }, 132, "lg"); $app.querySelector("#badge-prev").innerHTML = badgeOf({ badge: st.badge }); };
+      const refreshChip = () => { const c = $app.querySelector(".pts-chip b"); if (c) c.textContent = pts().toLocaleString("ko-KR") + "P"; };
+      // 잠긴 아이템: 이벤트면 무료로 받고, 아니면 포인트로 열기
+      const unlock = (key, label, price, ev, apply) => {
+        if (ev) {
+          const el = openModal(`<h3>${esc(label)}</h3><p class="muted">${esc(ev.label)} 아이템이에요. 기간 안에 받으면 계속 쓸 수 있어요</p><div class="row gap"><button class="btn ghost" data-act="close-modal">닫기</button><button class="btn" id="get">무료로 받기</button></div>`);
+          el.querySelector("#get").onclick = async () => { await grantFree(key); closeModal(); toast(`${josa(label, "을/를")} 받았어요`); apply(); };
+          return;
+        }
+        if (pts() < price) {
+          const el = openModal(`<h3>포인트가 ${(price - pts()).toLocaleString("ko-KR")}P 부족해요</h3><p class="muted">${esc(josa(label, "은/는"))} ${price}P예요. 출석 체크, 투표, 후기 작성으로 포인트를 모을 수 있어요</p><div class="row gap"><button class="btn ghost" data-act="close-modal">닫기</button><a class="btn" href="#/points">모으는 방법</a></div>`);
+          el.querySelector("a.btn").onclick = () => closeModal();
+          return;
+        }
+        const el = openModal(`<h3>${esc(josa(label, "을/를"))} 열까요?</h3><p class="muted">${price}P를 써요. 지금 ${pts().toLocaleString("ko-KR")}P가 있어요</p><div class="row gap"><button class="btn ghost" data-act="close-modal">취소</button><button class="btn" id="buy">${price}P로 열기</button></div>`);
+        el.querySelector("#buy").onclick = async () => { const ok = await spend(key, price, label); closeModal(); if (ok) { toast(`${josa(label, "을/를")} 열었어요`); refreshChip(); apply(); } };
+      };
       const drawPanel = () => {
         const el = $app.querySelector("#panel"); el.innerHTML = panel();
         el.querySelectorAll("[data-k]").forEach(b => (b.onclick = () => {
           const k = b.dataset.k, raw = b.dataset.v;
-          st.avatar[k] = ["skin", "hairColor", "shirt", "bg"].includes(k) ? Number(raw) : k === "cheek" ? raw === "true" : raw;
-          drawPanel(); preview();
+          const v = A.COLOR_KEYS.includes(k) ? Number(raw) : (k === "cheek" || k === "lashes") ? raw === "true" : raw;
+          const apply = () => { st.avatar[k] = v; drawPanel(); preview(); };
+          if (A.isOwned(k, v, ownedSet())) return apply();
+          const label = (L[k] && L[k][v]) || (k === "hairColor" ? "머리 색" : k === "shirt" ? "옷 색" : k === "bg" ? "배경 색" : "아이템");
+          unlock(A.itemKey(k, v), label, A.priceOf(k, v), A.eventOf(k, v), apply);
+        }));
+        el.querySelectorAll("[data-badge]").forEach(b => (b.onclick = () => {
+          const id = b.dataset.badge, def = A.BADGES.find(x => x.id === id);
+          const apply = () => { st.badge = id; drawPanel(); preview(); };
+          if (!id || (!def.price && !def.event) || ownedSet().has("badge:" + id)) return apply();
+          unlock("badge:" + id, def.label + " 배지", def.price, def.event || null, apply);
         }));
       };
       drawPanel();
       $app.querySelectorAll("#tabs [data-tab]").forEach(a => (a.onclick = e => { e.preventDefault(); st.tab = a.dataset.tab; $app.querySelectorAll("#tabs a").forEach(x => x.classList.toggle("on", x === a)); drawPanel(); }));
-      $app.querySelector("#rand").onclick = () => { st.avatar = A.norm({ ...A.random(), acc: A.OPTIONS.acc[Math.floor(Math.random() * A.OPTIONS.acc.length)] }); drawPanel(); preview(); };
+      $app.querySelector("#rand").onclick = () => { st.avatar = A.norm({ ...st.avatar, ...A.random(ownedSet()) }); drawPanel(); preview(); };
       const bindTags = (id, arr) => $app.querySelectorAll(`#${id} .chip`).forEach(b => (b.onclick = () => {
         const v = b.dataset.t, i = arr.indexOf(v);
         if (i >= 0) arr.splice(i, 1); else { if (arr.length >= 3) return toast("최대 3개까지 고를 수 있어요"); arr.push(v); }
@@ -1180,7 +1282,7 @@
       $app.querySelector("#ok").onclick = async e => {
         e.currentTarget.disabled = true;
         try {
-          await S.store.savePublicProfile({ avatar: st.avatar, styleTags: st.styleTags, playTags: st.playTags, personalColor: st.personalColor });
+          await S.store.savePublicProfile({ avatar: st.avatar, badge: st.badge, styleTags: st.styleTags, playTags: st.playTags, personalColor: st.personalColor });
           S.pub = await S.store.getPublicProfile();
           toast("프로필을 저장했어요"); go("#/u/" + encodeURIComponent(S.user.uid));
         } catch (er) { toast("저장에 실패했어요"); e.currentTarget.disabled = false; }
@@ -1225,7 +1327,10 @@
         <div class="row gap mt"><a class="btn ghost sm grow" href="#/me/style">프로필 꾸미기</a><a class="btn ghost sm grow" href="#/u/${encodeURIComponent(S.user.uid)}">내 프로필 보기</a></div>
         <a class="link block tiny" href="#/me/edit">닉네임·지역·관심사 수정 (지역은 비공개)</a>
       </section>
-      <a class="card hist" href="#/saved">${ic("bookmark", 20)}<div class="grow"><b>저장한 항목</b></div>${ic("chev", 18, "chev")}</a>
+      <div class="group me-links">
+        <a class="hist" href="#/points">${ic("coin", 20)}<div class="grow"><b>포인트</b></div><b class="num pts-val">${pts().toLocaleString("ko-KR")}P</b>${ic("chev", 18, "chev")}</a>
+        <a class="hist" href="#/saved">${ic("bookmark", 20)}<div class="grow"><b>저장한 항목</b></div>${ic("chev", 18, "chev")}</a>
+      </div>
       <section>
         <div class="sec-head"><h2>내 게시물 <small class="muted">${posts.length}</small></h2><button class="link" id="up">올리기</button></div>
         ${posts.length ? `<div class="thumb-grid">${posts.map(x => { const st = STATUS[x.status] || STATUS.pending; return `<a href="#/post/${encodeURIComponent(x.id)}">${imgTag(postThumbRef(x), postTitle(x))}${x.status !== "approved" ? `<span class="status ${st[1]}">${st[0]}</span>` : ""}</a>`; }).join("")}</div>`
