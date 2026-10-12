@@ -903,7 +903,7 @@
          ${p.courseId ? `<a class="course-chip" href="#/course/${encodeURIComponent(p.courseId)}">${ic("pin", 15)}<span>${esc(p.courseTitle)}</span>${ic("chev", 15)}</a>` : ""}`;
     return `<article class="post" data-pid="${esc(p.id)}">
       <header class="post-head"><a class="post-author" href="#/u/${encodeURIComponent(p.uid)}">${avatarHtml(ctx.pubs[p.uid], 36)}
-        <div class="grow"><div class="name-line">${authorLine(ctx.pubs[p.uid], p.nickname)}</div><p class="muted tiny">${isVote ? (CATS[p.cat] || "기타") + " 투표" : "코스 후기"} · ${ago(p.approvedAt || p.createdAt)}</p></div></a>
+        <div class="grow"><div class="name-line">${authorLine(ctx.pubs[p.uid], p.nickname)}</div><p class="muted tiny">${isVote ? (CATS[p.cat] || "기타") + " 투표" : "코스 후기"} · ${ago(p.approvedAt || p.createdAt)}${p.editedAt ? " · 수정됨" : ""}</p></div></a>
         <button class="icon-btn" data-more aria-label="더보기">${ic("more", 20)}</button></header>
       ${body}
       ${p.text ? `<p class="post-text">${esc(p.text)}</p>` : ""}
@@ -940,13 +940,15 @@
       el.querySelector("[data-more]").onclick = () => {
         const own = p.uid === S.user.uid;
         const sh = openModal(`<button class="choice" data-m="share">${ic("share", 18)} 공유하기</button>
-          ${own ? `<button class="choice warn" data-m="del">${ic("x", 18)} 게시물 삭제</button>` : `<button class="choice" data-m="report">${ic("flag", 18)} 신고하기</button><button class="choice warn" data-m="block">${ic("block", 18)} 이 사용자 차단하기</button>`}
+          ${own ? `<button class="choice" data-m="edit">${ic("edit", 18)} 글 수정</button><button class="choice warn" data-m="del">${ic("x", 18)} 게시물 삭제</button>` : `<button class="choice" data-m="report">${ic("flag", 18)} 신고하기</button><button class="choice warn" data-m="block">${ic("block", 18)} 이 사용자 차단하기</button>`}
           <button class="btn ghost block" data-act="close-modal">닫기</button>`);
         sh.querySelector('[data-m="share"]').onclick = () => { closeModal(); share(postTitle(p), "#/post/" + encodeURIComponent(p.id)); };
         const rp = sh.querySelector('[data-m="report"]');
         if (rp) rp.onclick = () => reportSheet("post", p.id, { title: postTitle(p) });
         const bk = sh.querySelector('[data-m="block"]');
         if (bk) bk.onclick = async () => { closeModal(); if (await blockFlow(p.uid, (ctx.pubs[p.uid] || {}).nickname || p.nickname)) render(); };
+        const ed = sh.querySelector('[data-m="edit"]');
+        if (ed) ed.onclick = () => { closeModal(); editPostSheet(p); };
         const dl = sh.querySelector('[data-m="del"]');
         if (dl) dl.onclick = async () => {
           closeModal();
@@ -973,6 +975,33 @@
         dots.forEach((d, k) => d.classList.toggle("on", k === i));
       }, { passive: true });
     });
+  }
+  // 글 수정: 사진은 그대로, 공개 전에는 질문·선택지 이름도 고칠 수 있어요
+  function editPostSheet(p) {
+    const early = p.status !== "approved" && p.type === "vote";
+    const el = openModal(`<h3>글 수정</h3>
+      <p class="muted tiny">${early ? "공개 전이라 질문과 선택지 이름도 고칠 수 있어요" : p.type === "vote" ? "공개된 투표는 설명만 고칠 수 있어요. 질문과 선택지는 투표 결과가 바뀌지 않게 고정돼요" : "사진은 그대로 두고 글만 고쳐요"}</p>
+      ${early ? `<label class="field"><span>질문</span><input id="e-q" maxlength="30" value="${esc(p.question)}"></label>
+        <div class="field"><span>선택지</span><div class="nv-opts">${optKeys(p).map(k => `<input id="e-${k}" maxlength="15" value="${esc(p[k].label)}">`).join("")}</div></div>` : ""}
+      <label class="field"><span>${p.type === "vote" ? "한 줄 설명" : "한 줄 후기"} <small class="muted" id="e-cnt">${(p.text || "").length}/100</small></span><textarea id="e-text" rows="3" maxlength="100">${esc(p.text || "")}</textarea></label>
+      ${p.status === "rejected" ? `<p class="tiny muted">저장하면 다시 검토 중이 돼요</p>` : ""}
+      <div class="row gap"><button class="btn ghost grow" data-act="close-modal">취소</button><button class="btn grow" id="e-ok">저장</button></div>`);
+    const tx = el.querySelector("#e-text");
+    tx.oninput = () => (el.querySelector("#e-cnt").textContent = tx.value.length + "/100");
+    el.querySelector("#e-ok").onclick = async e => {
+      const f = { text: tx.value.trim() };
+      if (early) {
+        f.question = el.querySelector("#e-q").value.trim();
+        f.labels = Object.fromEntries(optKeys(p).map(k => [k, el.querySelector("#e-" + k).value.trim()]));
+        if (f.question.length < 3) return toast("질문을 입력해주세요");
+        if (Object.values(f.labels).some(x => !x)) return toast("선택지 이름을 모두 입력해주세요");
+        if (new Set(Object.values(f.labels)).size < optKeys(p).length) return toast("같은 선택지가 있어요");
+      }
+      if (p.type === "review" && f.text.length < 5) return toast("후기를 5자 이상 써주세요");
+      e.currentTarget.disabled = true;
+      try { await S.store.updatePost(p.id, f); closeModal(); toast("수정했어요"); render(); }
+      catch (er) { toast(er.message || "수정에 실패했어요"); e.currentTarget.disabled = false; }
+    };
   }
   function uploadSheet(courseId) {
     const el = openModal(`<h3>무엇을 올릴까요?</h3><p class="muted">올린 게시물은 운영자 확인 후 피드에 공개돼요</p>

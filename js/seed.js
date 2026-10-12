@@ -1,6 +1,23 @@
 // 초기 예시 콘텐츠 (서대문구)
 // 장소 이름은 일반 명칭, 비용은 1인 예상 금액이에요. 직접 다녀온 뒤 실제 정보로 바꿔주세요.
 
+// 예시 투표용 일러스트 (사진 대신 쓰는 간단한 그림)
+(function () {
+  const svg = (bg, body) => "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400"><rect width="300" height="400" fill="${bg}"/>${body}</svg>`);
+  const wide = c => `<rect x="88" y="58" width="124" height="22" rx="4" fill="${c}"/><path d="M88 80h124l26 282h-80l-8-196-8 196H62z" fill="${c}"/><path d="M150 80v86" stroke="rgba(0,0,0,.18)" stroke-width="3"/>`;
+  const cargo = c => `<rect x="94" y="58" width="112" height="22" rx="4" fill="${c}"/><path d="M94 80h112l12 282h-60l-8-190-8 190H82z" fill="${c}"/><rect x="72" y="196" width="30" height="44" rx="5" fill="rgba(0,0,0,.14)"/><rect x="198" y="196" width="30" height="44" rx="5" fill="rgba(0,0,0,.14)"/>`;
+  const cardi = c => `<path d="M100 66l50 26 50-26 54 40-24 58-16-10v196H86V154l-16 10-24-58z" fill="${c}"/><path d="M150 92v258" stroke="rgba(0,0,0,.16)" stroke-width="3"/><path d="M118 70l32 70 32-70" fill="none" stroke="rgba(0,0,0,.16)" stroke-width="3"/>` + [170, 215, 260, 305].map(y => `<circle cx="160" cy="${y}" r="5" fill="rgba(0,0,0,.25)"/>`).join("");
+  const wind = c => `<path d="M104 76c8-34 84-34 92 0l58 36-24 60-16-10v188H86V162l-16 10-24-60z" fill="${c}"/><path d="M150 96v254" stroke="rgba(255,255,255,.5)" stroke-width="4"/><path d="M86 230h128" stroke="rgba(0,0,0,.12)" stroke-width="10"/>`;
+  const hood = c => `<path d="M112 92c-6-56 82-56 76 0l66 24-24 60-16-10v184H86V166l-16 10-24-60z" fill="${c}"/><path d="M150 112v238" stroke="rgba(0,0,0,.2)" stroke-width="3"/><rect x="108" y="250" width="84" height="44" rx="10" fill="rgba(0,0,0,.1)"/>`;
+  const lip = c => `<path d="M60 300c50-40 130-40 180-10" stroke="${c}" stroke-width="26" stroke-linecap="round" fill="none" opacity=".55"/><rect x="122" y="196" width="56" height="150" rx="6" fill="#2B2F38"/><rect x="118" y="186" width="64" height="18" rx="4" fill="#C9CED6"/><path d="M128 186v-62l44-30v92z" fill="${c}"/>`;
+  window.TS_ART = {
+    "poll-01": [svg("#E9EEF5", wide("#5A7FB2")), svg("#F1EEE6", cargo("#9C8B6B"))],
+    "poll-02": [svg("#F4F1EA", cardi("#E6DDCB")), svg("#ECEDEF", cardi("#4A4E57"))],
+    "poll-03": [svg("#EAF0F2", wind("#3F7C8C")), svg("#F0EEF2", hood("#8A8F9A"))],
+    "poll-04": [svg("#FBF0EC", lip("#F07A5E")), svg("#F7EEF1", lip("#C2566F"))]
+  };
+})();
+
 window.TS_SEED = {
   courses: [
     {
@@ -89,16 +106,17 @@ window.TS_SEED = {
   polls: [
     { id: "q-01", cat: "food", question: "학원 끝나고 뭐 먹지?", a: { label: "마라탕", img: "" }, b: { label: "떡볶이", img: "" }, c: { label: "편의점 라면", img: "" }, d: { label: "김밥", img: "" } },
     { id: "q-02", cat: "play", question: "이번 주말 신촌에서 뭐 할까?", a: { label: "코인노래방", img: "" }, b: { label: "보드게임 카페", img: "" }, c: { label: "포토부스 + 카페", img: "" } },
-    { id: "q-03", cat: "outfit", question: "흰 티셔츠엔 어떤 바지?", a: { label: "와이드 데님", img: "" }, b: { label: "카고 팬츠", img: "" }, c: { label: "트레이닝 팬츠", img: "" } },
+    { id: "q-03", cat: "outfit", question: "흰 티셔츠엔 어떤 바지?", a: { label: "와이드 데님", img: window.TS_ART["poll-01"][0] }, b: { label: "카고 팬츠", img: window.TS_ART["poll-01"][1] } },
     { id: "q-04", cat: "etc", question: "시험 기간 공부 장소는?", a: { label: "집", img: "" }, b: { label: "스터디카페", img: "" }, c: { label: "도서관", img: "" }, d: { label: "카페", img: "" } },
-    { id: "q-05", cat: "makeup", question: "데일리 립 컬러는?", a: { label: "코랄", img: "" }, b: { label: "로즈", img: "" }, c: { label: "누디 베이지", img: "" } },
+    { id: "q-05", cat: "makeup", question: "데일리 립 컬러는?", a: { label: "코랄", img: window.TS_ART["poll-04"][0] }, b: { label: "로즈", img: window.TS_ART["poll-04"][1] } },
     { id: "q-06", cat: "food", question: "편의점 디저트 하나만 고르면?", a: { label: "푸딩", img: "" }, b: { label: "생크림빵", img: "" }, c: { label: "아이스크림", img: "" } },
-    { id: "q-07", cat: "outfit", question: "쌀쌀한 날 겉옷은?", a: { label: "바람막이", img: "" }, b: { label: "후드 집업", img: "" }, c: { label: "가디건", img: "" } },
+    { id: "q-07", cat: "outfit", question: "쌀쌀한 날 겉옷은?", a: { label: "바람막이", img: window.TS_ART["poll-03"][0] }, b: { label: "후드 집업", img: window.TS_ART["poll-03"][1] } },
     { id: "q-08", cat: "hair", question: "앞머리 스타일은?", a: { label: "시스루뱅", img: "" }, b: { label: "앞머리 없이", img: "" } },
     { id: "q-09", cat: "play", question: "친구 생일 파티 장소는?", a: { label: "파티룸", img: "" }, b: { label: "방탈출 카페", img: "" }, c: { label: "노래방", img: "" } },
     { id: "q-10", cat: "hair", question: "가을 머리색은?", a: { label: "흑갈색", img: "" }, b: { label: "애쉬 브라운", img: "" }, c: { label: "자연 갈색", img: "" } },
     { id: "q-11", cat: "makeup", question: "블러셔 위치는?", a: { label: "광대 위", img: "" }, b: { label: "볼 중앙", img: "" } },
-    { id: "q-12", cat: "etc", question: "프사 바꿀까?", a: { label: "바꾼다", img: "" }, b: { label: "그대로 둔다", img: "" } }
+    { id: "q-12", cat: "etc", question: "프사 바꿀까?", a: { label: "바꾼다", img: "" }, b: { label: "그대로 둔다", img: "" } },
+    { id: "q-13", cat: "outfit", question: "가을 가디건 색은?", a: { label: "아이보리", img: window.TS_ART["poll-02"][0] }, b: { label: "차콜", img: window.TS_ART["poll-02"][1] } }
   ],
   // 공개 프로필 (TeenSpot 에디터 계정)
   publicProfiles: {
@@ -108,7 +126,8 @@ window.TS_SEED = {
   posts: [
     { id: "q-01", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "food", question: "학원 끝나고 뭐 먹지?", text: "학원 10시에 끝나요. 늦게까지 여는 곳으로", a: { label: "마라탕", img: "" }, b: { label: "떡볶이", img: "" }, c: { label: "편의점 라면", img: "" }, d: { label: "김밥", img: "" } },
     { id: "q-02", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "play", question: "이번 주말 신촌에서 뭐 할까?", text: "3명이고 예산은 1인 1만5천원", a: { label: "코인노래방", img: "" }, b: { label: "보드게임 카페", img: "" }, c: { label: "포토부스 + 카페", img: "" } },
-    { id: "q-03", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "outfit", question: "흰 티셔츠엔 어떤 바지?", text: "이번 주 등굣길 코디 고민 중", a: { label: "와이드 데님", img: "" }, b: { label: "카고 팬츠", img: "" }, c: { label: "트레이닝 팬츠", img: "" } },
+    { id: "q-03", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "outfit", question: "흰 티셔츠엔 어떤 바지?", text: "이번 주 등굣길 코디 고민 중", a: { label: "와이드 데님", img: window.TS_ART["poll-01"][0] }, b: { label: "카고 팬츠", img: window.TS_ART["poll-01"][1] } },
+    { id: "q-05", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "makeup", question: "데일리 립 컬러는?", text: "가을에 쓸 립 하나만 고른다면", a: { label: "코랄", img: window.TS_ART["poll-04"][0] }, b: { label: "로즈", img: window.TS_ART["poll-04"][1] } },
     { id: "q-04", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "etc", question: "시험 기간 공부 장소는?", text: "카페는 시끄러울까요?", a: { label: "집", img: "" }, b: { label: "스터디카페", img: "" }, c: { label: "도서관", img: "" }, d: { label: "카페", img: "" } },
     { id: "q-06", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "food", question: "편의점 디저트 하나만 고르면?", text: "", a: { label: "푸딩", img: "" }, b: { label: "생크림빵", img: "" }, c: { label: "아이스크림", img: "" } }
   ]

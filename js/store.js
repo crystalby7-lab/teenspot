@@ -2,7 +2,7 @@
 (function () {
   const CFG = window.TS_CONFIG || {};
   const SEED = window.TS_SEED || { courses: [], polls: [] };
-  const SEED_V = 2; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
+  const SEED_V = 3; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
   const useFirebase = !!(CFG.firebase && CFG.firebase.apiKey);
   const now = () => Date.now();
   const rid = () => Math.random().toString(36).slice(2, 9) + now().toString(36);
@@ -36,6 +36,16 @@
       out.courseId = p.courseId; out.courseTitle = p.courseTitle || "";
       out.images = (p.images || []).slice(0, 4);
     }
+    return out;
+  }
+  // 글 수정: 공개 전에는 질문·선택지 이름도, 공개 후에는 설명만. 반려된 글을 고치면 다시 검토 중으로
+  function editFields(p, f) {
+    const out = { text: String(f.text || "").slice(0, 100), editedAt: now() };
+    if (p.status !== "approved" && p.type === "vote") {
+      if (f.question != null && String(f.question).trim().length >= 3) out.question = String(f.question).trim().slice(0, 30);
+      optKeys(p).forEach(k => { const l = f.labels && String(f.labels[k] || "").trim(); if (l) out[k] = { label: l.slice(0, 15), img: p[k].img || "" }; });
+    }
+    if (p.status === "rejected") { out.status = "pending"; out.rejectReason = ""; }
     return out;
   }
   function withReactions(p, rs, uid) {
@@ -206,6 +216,10 @@
         return Object.values(db().posts).filter(p => p.status === "approved").map(p => withReactions(p, Object.values(R[p.id] || {}), me())).sort(byNewest);
       },
       async myPosts() { return Object.values(db().posts).filter(p => p.uid === me()).sort((a, b) => b.createdAt - a.createdAt); },
+      async updatePost(id, f) {
+        const p = db().posts[id]; if (!p || p.uid !== me()) throw new Error("수정할 수 없어요");
+        Object.assign(p, editFields(p, f)); save(); return p;
+      },
       async react(pid, r) {
         const R = db().reactions; R[pid] = R[pid] || {};
         const cur = R[pid][me()] || { like: false, praise: null };
@@ -423,6 +437,12 @@
         return list(snap).map(p => withReactions(p, rx[p.id], me())).sort(byNewest);
       },
       async myPosts() { return list(await getDocs(query(collection(fs, "posts"), where("uid", "==", me())))).sort((a, b) => b.createdAt - a.createdAt); },
+      async updatePost(id, f) {
+        const ref = doc(fs, "posts", id), snap = await getDoc(ref);
+        if (!snap.exists() || snap.data().uid !== me()) throw new Error("수정할 수 없어요");
+        const p = { ...snap.data(), id }, up = editFields(p, f);
+        await updateDoc(ref, up); return { ...p, ...up };
+      },
       async react(pid, r) {
         const ref = doc(fs, "posts", pid, "reactions", me());
         const s = await getDoc(ref);

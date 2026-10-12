@@ -105,6 +105,9 @@ service cloud.firestore {
 
     // 피드 게시물: 작성 시 검토 중, 관리자 승인 후 공개
     match /posts/{pid} {
+      function sameImg(k) {
+        return !(k in resource.data) || request.resource.data[k].img == resource.data[k].img;
+      }
       allow read: if signedIn() && (resource.data.status == 'approved'
         || resource.data.uid == request.auth.uid || isAdmin());
       allow create: if hasProfile()
@@ -112,7 +115,14 @@ service cloud.firestore {
         && request.resource.data.status == 'pending'
         && request.resource.data.type in ['vote', 'review']
         && request.resource.data.text.size() <= 100;
-      allow update: if isAdmin();
+      // 작성자 글 수정: 공개 후에는 설명만, 공개 전에는 질문·선택지 이름도 (사진은 그대로)
+      allow update: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.text is string && request.resource.data.text.size() <= 100
+        && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+          || (resource.data.status != 'approved'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt', 'question', 'a', 'b', 'c', 'd', 'status', 'rejectReason'])
+            && sameImg('a') && sameImg('b') && sameImg('c') && sameImg('d'))));
       allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
 
       // 좋아요·칭찬: 1인 1개, 본인 것만
