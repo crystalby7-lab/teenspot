@@ -201,16 +201,21 @@
         if (p.type === "vote") { D.polls[id] = { id, cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now() }; p.pollId = id; }
         p.status = "approved"; p.approvedAt = now(); save();
       },
-      async rejectPost(id) { const p = db().posts[id]; if (p) { p.status = "rejected"; save(); } },
+      async rejectPost(id, reason) { const p = db().posts[id]; if (p) { p.status = "rejected"; p.rejectReason = reason || ""; p.rejectedAt = now(); save(); } },
+      async myReactions() {
+        const D = db(), out = [];
+        Object.values(D.posts).filter(p => p.uid === me() && p.status === "approved").forEach(p => Object.values(D.reactions[p.id] || {}).forEach(r => { if (r.uid !== me()) out.push({ ...r, pid: p.id }); }));
+        return out;
+      },
       async isAdmin() { return true; },
       async listSubmissions() { return Object.values(db().submissions).sort((a, b) => b.createdAt - a.createdAt); },
       async approveSubmission(id) {
         const s = db().submissions[id]; if (!s) return;
         const cid = rid();
         db().courses[cid] = { ...cleanCourse(s), id: cid, submittedBy: s.nickname, createdAt: now() };
-        s.status = "approved"; s.courseId = cid; save();
+        s.status = "approved"; s.courseId = cid; s.approvedAt = now(); save();
       },
-      async rejectSubmission(id) { if (db().submissions[id]) { db().submissions[id].status = "rejected"; save(); } },
+      async rejectSubmission(id, reason) { const x = db().submissions[id]; if (x) { x.status = "rejected"; x.rejectReason = reason || ""; x.rejectedAt = now(); save(); } },
       async saveCourse(c) { const id = c.id || rid(); db().courses[id] = { ...(db().courses[id] || { createdAt: now() }), ...cleanCourse(c), id }; save(); return id; },
       async deleteCourse(id) { delete db().courses[id]; delete db().reviews[id]; save(); },
       async savePoll(p) {
@@ -407,16 +412,22 @@
         if (p.type === "vote") await setDoc(doc(fs, "polls", id), { cat: p.cat, question: p.question, a: p.a, b: p.b, uid: p.uid, nickname: p.nickname, createdAt: now() });
         await updateDoc(doc(fs, "posts", id), { status: "approved", pollId: p.type === "vote" ? id : null, approvedAt: now() });
       },
-      async rejectPost(id) { await updateDoc(doc(fs, "posts", id), { status: "rejected" }); },
+      async rejectPost(id, reason) { await updateDoc(doc(fs, "posts", id), { status: "rejected", rejectReason: reason || "", rejectedAt: now() }); },
+      async myReactions() {
+        const [mine, rx] = await Promise.all([this.myPosts(), allReactions()]);
+        const out = [];
+        mine.filter(p => p.status === "approved").forEach(p => (rx[p.id] || []).forEach(r => { if (r.uid !== me()) out.push({ ...r, pid: p.id }); }));
+        return out;
+      },
       async isAdmin() { try { return (await getDoc(doc(fs, "admins", me()))).exists(); } catch (e) { return false; } },
       async listSubmissions() { return list(await getDocs(collection(fs, "submissions"))).sort((a, b) => b.createdAt - a.createdAt); },
       async approveSubmission(id) {
         const s = await getDoc(doc(fs, "submissions", id)); if (!s.exists()) return;
         const data = s.data();
         const r = await addDoc(collection(fs, "courses"), { ...cleanCourse(data), submittedBy: data.nickname, createdAt: now() });
-        await updateDoc(doc(fs, "submissions", id), { status: "approved", courseId: r.id });
+        await updateDoc(doc(fs, "submissions", id), { status: "approved", courseId: r.id, approvedAt: now() });
       },
-      async rejectSubmission(id) { await updateDoc(doc(fs, "submissions", id), { status: "rejected" }); },
+      async rejectSubmission(id, reason) { await updateDoc(doc(fs, "submissions", id), { status: "rejected", rejectReason: reason || "", rejectedAt: now() }); },
       async saveCourse(c) {
         if (c.id) { await setDoc(doc(fs, "courses", c.id), cleanCourse(c), { merge: true }); return c.id; }
         const r = await addDoc(collection(fs, "courses"), { ...cleanCourse(c), createdAt: now() }); return r.id;

@@ -187,6 +187,8 @@
       case "me": return p[1] === "edit" ? screenMeEdit(t) : p[1] === "style" ? screenAvatarEdit(t) : screenMe(t);
       case "u": return screenUser(t, p[1]);
       case "points": return screenPoints(t);
+      case "notifications": return screenNotis(t);
+      case "blocked": return screenBlockList(t);
       case "settings": return screenSettings(t);
       case "withdraw": return screenWithdraw(t);
       case "admin": return screenAdmin(t, p, q);
@@ -484,7 +486,7 @@
     paint(t, page(header("", { brand: true }) + loadingHtml(), "home"));
     const [courses, polls, votes, feed] = await Promise.all([S.store.listCourses(), S.store.listPolls(), S.store.myVotes(), S.store.listFeed()]);
     const gu = S.profile.gu;
-    const strip = feed.slice(0, 8);
+    const strip = visible(feed).slice(0, 8);
     let local = courses.filter(c => c.gu === gu), fallback = false;
     if (!local.length) { local = courses.filter(c => c.gu === LAUNCH_GU); fallback = true; }
     const top = popular(local).slice(0, 3);
@@ -493,7 +495,7 @@
     const budgetLabel = (BUDGETS.find(b => b[0] === f.budget) || [0, "예산 자유"])[1];
     const findHref = `#/spot/list?people=${f.people}&budget=${f.budget}&hours=${f.hours}&gu=${encodeURIComponent(f.gu)}`;
     paint(t, page(`
-      ${header("", { brand: true, right: `${demoBadge()}<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>` })}
+      ${header("", { brand: true, right: `${demoBadge()}<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>${bellHtml()}` })}
       <section class="hero">
         <div class="hero-text">
           <p>${esc(S.profile.nickname)}님, 이번 주말엔</p>
@@ -524,7 +526,7 @@
       </section>
       <a class="cta-card" href="#/submit"><span class="cta-ic">${ic("send", 20)}</span><div><b>나만 아는 코스가 있어요</b><p class="muted tiny">제보하면 승인 후 모두에게 보여져요</p></div>${ic("chev", 18, "chev")}</a>
     `, "home"));
-    syncRewards();
+    syncRewards().then(refreshBell);
   }
 
   /* =========================================================
@@ -580,7 +582,7 @@
   async function screenCourse(t, id) {
     paint(t, page(header("코스", { back: true }) + loadingHtml()));
     const [c, reviews, mine, saves, feed] = await Promise.all([S.store.getCourse(id), S.store.listReviews(id), S.store.myReview(id), S.store.getSaves(), S.store.listFeed()]);
-    const photos = feed.filter(p => p.type === "review" && p.courseId === id);
+    const photos = visible(feed).filter(p => p.type === "review" && p.courseId === id);
     if (!c) return paint(t, page(header("코스", { back: true }) + emptyHtml("alert", "코스를 찾을 수 없어요", "삭제됐거나 주소가 잘못됐어요", `<a class="btn sm" href="#/spot">코스 찾기로</a>`)));
     let saved = saves.some(s => s.type === "course" && s.id === id);
     const recRate = pct(c.recCount, c.reviewCount);
@@ -609,7 +611,7 @@
       </section>
       <section>
         <div class="sec-head"><h2>다녀온 후기</h2></div>
-        ${reviews.length ? reviews.map(r => `<div class="review card">
+        ${visible(reviews).length ? visible(reviews).map(r => `<div class="review card">
             <div class="rv-top"><a href="#/u/${encodeURIComponent(r.uid)}"><b>${esc(r.nickname)}</b></a><span class="rec-pill ${r.recommend ? "yes" : "no"}">${r.recommend ? "추천" : "비추천"}</span></div>
             <p>${esc(r.text)}</p>
             <div class="rv-meta muted tiny"><span>실제 지출 ${won(r.spent)}</span><span>${esc(r.date || "")}</span>${r.uid !== S.user.uid ? `<button class="link tiny" data-rep="${esc(r.uid)}">신고</button>` : ""}</div>
@@ -902,11 +904,13 @@
       el.querySelector("[data-more]").onclick = () => {
         const own = p.uid === S.user.uid;
         const sh = openModal(`<button class="choice" data-m="share">${ic("share", 18)} 공유하기</button>
-          ${own ? `<button class="choice warn" data-m="del">${ic("x", 18)} 게시물 삭제</button>` : `<button class="choice" data-m="report">${ic("flag", 18)} 신고하기</button>`}
+          ${own ? `<button class="choice warn" data-m="del">${ic("x", 18)} 게시물 삭제</button>` : `<button class="choice" data-m="report">${ic("flag", 18)} 신고하기</button><button class="choice warn" data-m="block">${ic("block", 18)} 이 사용자 차단하기</button>`}
           <button class="btn ghost block" data-act="close-modal">닫기</button>`);
         sh.querySelector('[data-m="share"]').onclick = () => { closeModal(); share(postTitle(p), "#/post/" + encodeURIComponent(p.id)); };
         const rp = sh.querySelector('[data-m="report"]');
         if (rp) rp.onclick = () => reportSheet("post", p.id, { title: postTitle(p) });
+        const bk = sh.querySelector('[data-m="block"]');
+        if (bk) bk.onclick = async () => { closeModal(); if (await blockFlow(p.uid, (ctx.pubs[p.uid] || {}).nickname || p.nickname)) render(); };
         const dl = sh.querySelector('[data-m="del"]');
         if (dl) dl.onclick = async () => {
           closeModal();
@@ -948,7 +952,7 @@
     const f = ["vote", "review"].includes(q.f) ? q.f : "all";
     const right = `<button class="icon-btn" id="up" aria-label="게시물 올리기">${ic("plus", 24)}</button>`;
     paint(t, page(header("피드", { right }) + loadingHtml(), "feed"));
-    const all = await S.store.listFeed();
+    const all = visible(await S.store.listFeed());
     const posts = all.filter(p => f === "all" || p.type === f);
     const ctx = await feedContext(posts);
     paint(t, page(`
@@ -964,7 +968,7 @@
   }
   async function screenPost(t, id) {
     paint(t, page(header("게시물", { back: true }) + loadingHtml()));
-    let p = (await S.store.listFeed()).find(x => x.id === id);
+    let p = visible(await S.store.listFeed()).find(x => x.id === id);
     let pending = false;
     if (!p) { p = (await S.store.myPosts()).find(x => x.id === id); pending = !!p; }
     if (!p && S.admin) { p = (await S.store.listPosts()).find(x => x.id === id); pending = !!p; }
@@ -973,7 +977,7 @@
     const st = STATUS[p.status] || STATUS.pending;
     paint(t, page(`
       ${header("게시물", { back: true })}
-      ${pending && p.status !== "approved" ? `<p class="hint">${st[0]} · ${p.status === "rejected" ? "가이드라인에 맞지 않아 공개되지 않았어요" : "운영자 확인 후 피드에 공개돼요"}</p>` : ""}
+      ${pending && p.status !== "approved" ? `<p class="hint ${p.status === "rejected" ? "hint-warn" : ""}">${p.status === "rejected" ? `<b>공개되지 않았어요</b><br>${esc(rejectNote(p))}. 내용을 바꿔서 다시 올릴 수 있어요` : "검토 중이에요. 운영자 확인 후 피드에 공개돼요"}</p>` : ""}
       <div class="feed">${feedCard(p, ctx)}</div>
     `), () => bindFeed([p], ctx));
   }
@@ -1104,7 +1108,8 @@
     paint(t, page(header("프로필", { back: true }) + loadingHtml()));
     const [pub, feed] = await Promise.all([S.store.getPublicProfile(uid), S.store.listFeed()]);
     if (!pub) return paint(t, page(header("프로필", { back: true }) + emptyHtml("user", "프로필을 찾을 수 없어요", "탈퇴했거나 주소가 잘못됐어요")));
-    const posts = feed.filter(p => p.uid === uid);
+    const isBlocked = blockedSet().has(uid);
+    const posts = isBlocked ? [] : feed.filter(p => p.uid === uid);
     const likes = posts.reduce((s, p) => s + (p.likes || 0), 0);
     const mine = uid === S.user.uid;
     const age = ageOf(pub);
@@ -1124,13 +1129,15 @@
       ${mine ? `<a class="btn ghost block" href="#/me/style">${ic("edit", 18)} 프로필 꾸미기</a>` : ""}
       <section>
         <div class="sec-head"><h2>게시물</h2></div>
-        ${posts.length ? `<div class="thumb-grid">${posts.map(x => `<a href="#/post/${encodeURIComponent(x.id)}">${imgTag(postThumbRef(x), postTitle(x))}</a>`).join("")}</div>` : emptyHtml("image", "아직 공개된 게시물이 없어요", "")}
+        ${isBlocked ? emptyHtml("block", "차단한 사용자예요", "오른쪽 위 메뉴에서 차단을 풀 수 있어요") : posts.length ? `<div class="thumb-grid">${posts.map(x => `<a href="#/post/${encodeURIComponent(x.id)}">${imgTag(postThumbRef(x), postTitle(x))}</a>`).join("")}</div>` : emptyHtml("image", "아직 공개된 게시물이 없어요", "")}
       </section>
     `), () => {
       const m = $app.querySelector("#more");
       if (m) m.onclick = () => {
-        const el = openModal(`<button class="choice" id="ru">${ic("flag", 18)} 이 프로필 신고하기</button><button class="btn ghost block" data-act="close-modal">닫기</button>`);
+        const isB = blockedSet().has(uid);
+        const el = openModal(`<button class="choice" id="ru">${ic("flag", 18)} 이 프로필 신고하기</button><button class="choice ${isB ? "" : "warn"}" id="bu">${ic("block", 18)} ${isB ? "차단 해제" : "이 사용자 차단하기"}</button><button class="btn ghost block" data-act="close-modal">닫기</button>`);
         el.querySelector("#ru").onclick = () => reportSheet("user", uid, { title: pub.nickname });
+        el.querySelector("#bu").onclick = async () => { closeModal(); if (isB) { await setBlocked(uid, false); toast("차단을 풀었어요"); render(); } else if (await blockFlow(uid, pub.nickname)) render(); };
       };
     });
   }
@@ -1291,6 +1298,101 @@
   }
 
   /* =========================================================
+     알림 · 반려 사유 · 차단
+     ========================================================= */
+  const POST_REASONS = ["얼굴이 보여요", "이름·학교·교복이 보여요", "다른 사람이 찍은 사진 같아요", "주제와 맞지 않아요", "광고·홍보 같아요"];
+  const SUB_REASONS = ["정보가 부족해요", "이미 있는 코스예요", "청소년에게 맞지 않는 장소예요", "광고·홍보 같아요"];
+  function reasonSheet(title, reasons) {
+    return new Promise(res => {
+      const el = openModal(`<h3>${esc(title)}</h3><p class="muted">작성자에게 반려 사유가 보여요</p>
+        <div class="list-choice">${reasons.map(r => `<button class="choice" data-r="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+        <button class="btn ghost block" data-r="">취소</button>`);
+      el.querySelectorAll("[data-r]").forEach(b => (b.onclick = () => { closeModal(); res(b.dataset.r || null); }));
+      $modal.querySelector(".modal-bg").onclick = () => { closeModal(); res(null); };
+    });
+  }
+  const rejectNote = x => (x && x.status === "rejected" ? `반려 사유: ${x.rejectReason || "가이드라인에 맞지 않아요"}` : "");
+
+  // 차단
+  const blockedSet = () => new Set((S.profile && S.profile.blocked) || []);
+  const visible = arr => { const b = blockedSet(); return arr.filter(x => !b.has(x.uid)); };
+  async function setBlocked(uid, on) {
+    const b = blockedSet(); on ? b.add(uid) : b.delete(uid);
+    Object.assign(S.profile, { blocked: [...b] });
+    await S.store.saveProfile({ blocked: [...b] });
+  }
+  async function blockFlow(uid, nick) {
+    if (!(await confirmSheet(`${josa(nick || "이 사용자", "을/를")} 차단할까요?`, "이 사용자의 게시물과 후기가 내 화면에 보이지 않게 돼요. 설정에서 언제든 풀 수 있어요", "차단", true))) return false;
+    try { await setBlocked(uid, true); toast("차단했어요"); return true; } catch (e) { toast("차단에 실패했어요"); return false; }
+  }
+  async function screenBlockList(t) {
+    paint(t, page(header("차단한 사용자", { back: true }) + loadingHtml()));
+    const ids = [...blockedSet()];
+    const pubs = await S.store.getPublicProfiles(ids);
+    paint(t, page(`
+      ${header("차단한 사용자", { back: true })}
+      ${ids.length ? `<div class="group">${ids.map(u => `<div class="hist block-row">${avatarHtml(pubs[u], 40)}<div class="grow"><b>${esc((pubs[u] || {}).nickname || "탈퇴한 사용자")}</b></div><button class="btn ghost sm" data-unblock="${esc(u)}">차단 해제</button></div>`).join("")}</div>`
+        : emptyHtml("user", "차단한 사용자가 없어요", "")}
+    `), () => {
+      $app.querySelectorAll("[data-unblock]").forEach(b => (b.onclick = async () => { await setBlocked(b.dataset.unblock, false); toast("차단을 풀었어요"); render(); }));
+    });
+  }
+
+  // 알림: 게시물·제보 승인과 반려, 받은 좋아요·칭찬, 내 투표 참여 수
+  const qj = (title, pair) => { const w = josa(title, pair); return `'${title}'${w.slice(title.length)}`; };
+  async function buildNotis() {
+    const [posts, subs, rx] = await Promise.all([S.store.myPosts(), S.store.mySubmissions(), S.store.myReactions()]);
+    const blocked = blockedSet();
+    const out = [];
+    posts.forEach(p => {
+      const title = postTitle(p);
+      if (p.status === "approved") out.push({ at: p.approvedAt || p.createdAt, icon: "checkCircle", text: `게시물 ${qj(title, "이/가")} 피드에 공개됐어요`, href: "#/post/" + encodeURIComponent(p.id) });
+      if (p.status === "rejected") out.push({ at: p.rejectedAt || p.createdAt, icon: "alert", warn: true, text: `게시물 ${qj(title, "이/가")} 공개되지 않았어요`, sub: rejectNote(p), href: "#/post/" + encodeURIComponent(p.id) });
+    });
+    subs.forEach(s => {
+      if (s.status === "approved") out.push({ at: s.approvedAt || s.createdAt, icon: "map", text: `제보한 코스 ${qj(s.title, "이/가")} 공개됐어요`, href: "#/course/" + encodeURIComponent(s.courseId || "") });
+      if (s.status === "rejected") out.push({ at: s.rejectedAt || s.createdAt, icon: "alert", warn: true, text: `제보한 코스 ${qj(s.title, "이/가")} 공개되지 않았어요`, sub: rejectNote(s), href: "#/me" });
+    });
+    const rxv = rx.filter(r => !blocked.has(r.uid));
+    const pubs = await S.store.getPublicProfiles([...new Set(rxv.map(r => r.uid))]);
+    const byPost = Object.fromEntries(posts.map(p => [p.id, p]));
+    rxv.forEach(r => {
+      const p = byPost[r.pid]; if (!p) return;
+      const nick = (pubs[r.uid] || {}).nickname || "누군가";
+      const praise = r.praise ? ((PRAISE[p.type] || []).find(x => x[0] === r.praise) || [])[1] : "";
+      if (!r.like && !praise) return;
+      out.push({ at: r.at || 0, icon: "heart", av: pubs[r.uid], text: praise ? `${nick}님이 ${qj(praise, "을/를")} 보냈어요` : `${nick}님이 내 게시물을 좋아해요`, sub: postTitle(p), href: "#/post/" + encodeURIComponent(p.id) });
+    });
+    for (const p of posts.filter(x => x.type === "vote" && x.pollId && x.status === "approved")) {
+      try { const r = await S.store.pollResult(p.pollId); const n = r.a + r.b; if (n) out.push({ at: p.approvedAt || p.createdAt, icon: "vote", text: `내 투표 '${p.question}'에 ${n}명이 참여했어요`, sub: `${p.a.label} ${pct(r.a, n)}% · ${p.b.label} ${n ? 100 - pct(r.a, n) : 0}%`, href: "#/post/" + encodeURIComponent(p.id) }); } catch (e) {}
+    }
+    return out.sort((a, b) => b.at - a.at);
+  }
+  async function refreshBell() {
+    try {
+      const list = await buildNotis();
+      const seen = (S.profile && S.profile.notiSeen) || 0;
+      const n = list.filter(x => x.at > seen).length;
+      const dot = document.querySelector(".bell .bell-dot");
+      if (dot) { dot.hidden = !n; dot.textContent = n > 9 ? "9+" : n; }
+    } catch (e) {}
+  }
+  const bellHtml = () => `<a class="icon-btn bell" href="#/notifications" aria-label="알림">${ic("bell", 22)}<span class="bell-dot num" hidden></span></a>`;
+  async function screenNotis(t) {
+    paint(t, page(header("알림", { back: true }) + loadingHtml()));
+    const list = await buildNotis();
+    const seen = (S.profile && S.profile.notiSeen) || 0;
+    paint(t, page(`
+      ${header("알림", { back: true })}
+      ${list.length ? `<div class="group noti-list">${list.map(x => `<a class="noti ${x.at > seen ? "new" : ""}" href="${x.href}">
+          ${x.av ? avatarHtml(x.av, 40) : `<span class="noti-ic ${x.warn ? "warn" : ""}">${ic(x.icon, 19)}</span>`}
+          <div class="grow"><p>${esc(x.text)}</p>${x.sub ? `<small>${esc(x.sub)}</small>` : ""}<time>${ago(x.at)}</time></div></a>`).join("")}</div>`
+        : `<div class="center-screen">${mascot("sleepy", 80)}<h2>아직 알림이 없어요</h2><p class="muted">게시물을 올리거나 투표하면 소식이 여기 모여요</p></div>`}
+    `));
+    if (list.length) S.store.saveProfile({ notiSeen: Date.now() }).then(() => { S.profile.notiSeen = Date.now(); }).catch(() => {});
+  }
+
+  /* =========================================================
      6. 저장·마이
      ========================================================= */
   async function screenSaved(t, q) {
@@ -1343,7 +1445,7 @@
       </section>
       <section>
         <div class="sec-head"><h2>내 제보 <small class="muted">${subs.length}</small></h2><a class="link" href="#/submit">제보하기</a></div>
-        ${subs.length ? subs.map(s => { const st = STATUS[s.status] || STATUS.pending; return `<${s.courseId ? `a href="#/course/${encodeURIComponent(s.courseId)}"` : "div"} class="card hist"><div class="grow"><b>${esc(s.title)}</b><p class="muted tiny">${esc(s.area)} · ${fmtDate(s.createdAt)}</p></div><span class="status ${st[1]}">${st[0]}</span></${s.courseId ? "a" : "div"}>`; }).join("")
+        ${subs.length ? subs.map(s => { const st = STATUS[s.status] || STATUS.pending; return `<${s.courseId ? `a href="#/course/${encodeURIComponent(s.courseId)}"` : "div"} class="card hist"><div class="grow"><b>${esc(s.title)}</b><p class="muted tiny">${s.status === "rejected" ? esc(rejectNote(s)) : esc(s.area) + " · " + fmtDate(s.createdAt)}</p></div><span class="status ${st[1]}">${st[0]}</span></${s.courseId ? "a" : "div"}>`; }).join("")
           : emptyHtml("send", "아직 제보한 코스가 없어요", "")}
       </section>
     `, "me"), () => { $app.querySelector("#up").onclick = () => uploadSheet(); });
@@ -1385,6 +1487,7 @@
         <a href="#/legal/terms">서비스 이용약관${ic("chev", 18, "chev")}</a>
         <a href="#/legal/privacy">개인정보 수집·이용${ic("chev", 18, "chev")}</a>
         <a href="#/legal/guide">커뮤니티 가이드라인${ic("chev", 18, "chev")}</a>
+        <a href="#/blocked">차단한 사용자 <small class="muted num">${blockedSet().size || ""}</small>${ic("chev", 18, "chev")}</a>
         <a href="#/legal/marketing">마케팅 정보 수신 <small class="muted">${S.profile.agreements && S.profile.agreements.marketing ? "동의함" : "동의 안 함"}</small>${ic("chev", 18, "chev")}</a>
       </div>
       <div class="menu card">
@@ -1560,7 +1663,7 @@
       ${done.length ? `<div class="sec-head"><h2>처리 완료</h2></div>${done.map(card).join("")}` : ""}
     `), () => {
       $app.querySelectorAll("[data-ok]").forEach(b => (b.onclick = async () => { b.disabled = true; await S.store.approveSubmission(b.dataset.ok); toast("승인했어요. 코스로 공개됐어요"); render(); }));
-      $app.querySelectorAll("[data-rej]").forEach(b => (b.onclick = async () => { if (await confirmSheet("이 제보를 반려할까요?", "", "반려", true)) { await S.store.rejectSubmission(b.dataset.rej); toast("반려했어요"); render(); } }));
+      $app.querySelectorAll("[data-rej]").forEach(b => (b.onclick = async () => { const r = await reasonSheet("반려 사유를 골라주세요", SUB_REASONS); if (r) { await S.store.rejectSubmission(b.dataset.rej, r); toast("반려했어요"); render(); } }));
     });
   }
   async function adminReports(t) {
@@ -1605,6 +1708,7 @@
       <p class="muted tiny">${esc(x.nickname)} · ${fmtDate(x.createdAt)}${x.type === "vote" ? ` · ${esc(x.a.label)} vs ${esc(x.b.label)}` : ""}</p>
       <div class="review-imgs">${imgs.map(r => imgTag(r, "")).join("")}</div>
       ${x.text ? `<p class="tiny">${esc(x.text)}</p>` : ""}
+      ${x.status === "rejected" ? `<p class="tiny warn">${esc(rejectNote(x))}</p>` : ""}
       ${x.status === "pending" ? `<p class="tiny muted">얼굴·이름·학교·교복이 보이면 반려해주세요</p><div class="row gap"><button class="btn ghost grow warn" data-rej="${esc(x.id)}">반려</button><button class="btn grow" data-ok="${esc(x.id)}">승인</button></div>`
         : `<div class="row gap"><a class="btn ghost sm" href="#/post/${encodeURIComponent(x.id)}">보기</a><button class="btn ghost sm warn" data-del="${esc(x.id)}">삭제</button></div>`}
     </div>`; };
@@ -1615,7 +1719,7 @@
       ${done.length ? `<div class="sec-head mt"><h2>처리 완료</h2></div>${done.map(card).join("")}` : ""}
     `), () => {
       $app.querySelectorAll("[data-ok]").forEach(b => (b.onclick = async () => { b.disabled = true; try { await S.store.approvePost(b.dataset.ok); toast("승인했어요. 피드에 공개됐어요"); render(); } catch (e) { toast("실패: " + e.message); b.disabled = false; } }));
-      $app.querySelectorAll("[data-rej]").forEach(b => (b.onclick = async () => { if (await confirmSheet("이 게시물을 반려할까요?", "작성자에게는 '반려'로 표시돼요", "반려", true)) { await S.store.rejectPost(b.dataset.rej); toast("반려했어요"); render(); } }));
+      $app.querySelectorAll("[data-rej]").forEach(b => (b.onclick = async () => { const r = await reasonSheet("반려 사유를 골라주세요", POST_REASONS); if (r) { await S.store.rejectPost(b.dataset.rej, r); toast("반려했어요"); render(); } }));
       $app.querySelectorAll("[data-del]").forEach(b => (b.onclick = async () => { if (await confirmSheet("게시물을 삭제할까요?", "사진과 반응이 모두 지워져요", "삭제", true)) { await S.store.deletePost(b.dataset.del); toast("삭제했어요"); render(); } }));
     });
   }
