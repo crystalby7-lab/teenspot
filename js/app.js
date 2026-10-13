@@ -552,37 +552,20 @@
     paint(t, page(header("", { brand: true }) + loadingHtml(), "home"));
     const [courses, polls, votes, feed] = await Promise.all([S.store.listCourses(), S.store.listPolls(), S.store.myVotes(), S.store.listFeed()]);
     const gu = S.profile.gu;
-    const strip = visible(feed).filter(p => p.type !== "combo").slice(0, 8);
     const combos = comboRank(visible(feed).filter(p => p.type === "combo")).slice(0, 3);
     let local = courses.filter(c => c.gu === gu), fallback = false;
     if (!local.length) { local = courses.filter(c => c.gu === LAUNCH_GU); fallback = true; }
     const top = popular(local).slice(0, 3);
     const nextPoll = polls.find(p => !votes[p.id]);
-    const f = S.spotFilter || (S.spotFilter = { people: 3, budget: 15000, hours: 4, gu });
-    const budgetLabel = (BUDGETS.find(b => b[0] === f.budget) || [0, "예산 자유"])[1];
-    const findHref = `#/spot/list?people=${f.people}&budget=${f.budget}&hours=${f.hours}&gu=${encodeURIComponent(f.gu)}`;
     paint(t, page(`
-      ${header("", { brand: true, right: `${demoBadge()}<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>${bellHtml()}` })}
-      <section class="hero">
-        <div class="hero-text">
-          <p>${esc(S.profile.nickname)}님, 이번 주말엔</p>
-          <h2>친구랑<br>어디 갈까?</h2>
-        </div>
-        <div class="hero-mascot">${mascot("default", 58, { inverse: true, shadow: false })}</div>
-        <a class="hero-cond" href="#/spot" aria-label="조건 바꾸기">
-          <span><small>인원</small><b class="num">${f.people}명</b></span>
-          <span><small>1인 예산</small><b class="num">${budgetLabel === "상관없음" ? "자유" : budgetLabel}</b></span>
-          <span><small>시간</small><b class="num">${f.hours ? f.hours + "시간" : "자유"}</b></span>
-          ${ic("edit", 16, "hc-edit")}
-        </a>
-        <a class="btn light block lg" href="${findHref}">이 조건으로 코스 찾기</a>
-      </section>
-      <section>
-        <div class="sec-head"><h2>오늘 뭐 고민돼?</h2></div>
+      ${header("", { brand: true, right: `<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>${bellHtml()}` })}
+      <section class="hero hero2">
+        <div class="hero-text"><p>${esc(S.profile.nickname)}님, 오늘은</p><h2>뭐가 고민돼?</h2></div>
+        <div class="hero-mascot">${mascot("happy", 54, { inverse: true, shadow: false })}</div>
         <div class="quick">
           <a href="#/style?cat=food">${art("ramen", "a-q")}<b>뭐 먹지</b></a>
           <a href="#/style?cat=outfit">${art("shirt", "a-q")}<b>뭐 입지</b></a>
-          <a href="#/style?cat=play">${art("ticket", "a-q")}<b>뭐 하지</b></a>
+          <a href="#/spot">${art("ticket", "a-q")}<b>어디 가지</b></a>
           <a href="#/combo">${art("store", "a-q")}<b>꿀조합</b></a>
         </div>
       </section>
@@ -591,20 +574,13 @@
         ${nextPoll ? pollCard(nextPoll, false) : emptyHtml("checkCircle", "모든 투표에 참여했어요", "새 투표가 올라오면 알려드릴게요", `<a class="btn ghost sm" href="#/style/history">내 선택 보기</a>`)}
       </section>
       ${combos.length ? `<section>
-        <div class="sec-head"><h2>요즘 뜨는 꿀조합</h2><a href="#/combo" class="more-link">전체${ic("chev", 14)}</a></div>
+        <div class="sec-head"><h2>요즘 뜨는 꿀조합</h2><a href="#/combo" class="more-link">더보기${ic("chev", 14)}</a></div>
         <div class="group">${combos.map((c, i) => comboRow(c, i)).join("")}</div>
       </section>` : ""}
       <section>
-        <div class="sec-head"><h2>새 피드</h2><a href="#/feed" class="more-link">전체${ic("chev", 14)}</a></div>
-        ${strip.length ? `<div class="strip">${strip.map(p => `<a class="strip-item" href="#/post/${encodeURIComponent(p.id)}">${postTile(p)}${postThumbRef(p) ? `<span>${esc(postTitle(p))}</span>` : ""}</a>`).join("")}</div>`
-          : emptyHtml("image", "아직 게시물이 없어요", "", `<a class="btn sm" href="#/feed">피드 가기</a>`)}
+        <div class="sec-head"><h2>${fallback ? esc(LAUNCH_GU) : esc(gu)} 인기 코스</h2><a href="#/spot/list" class="more-link">더보기${ic("chev", 14)}</a></div>
+        ${top.length ? courseList(top) : emptyHtml("map", "아직 코스가 없어요", "첫 코스를 제보해주세요", `<a class="btn sm" href="#/submit">코스 제보하기</a>`)}
       </section>
-      <section>
-        <div class="sec-head"><h2>지금 뜨는 코스</h2><a href="#/spot/list" class="more-link">전체${ic("chev", 14)}</a></div>
-        ${fallback ? `<p class="hint">${esc(gu)} 코스는 준비 중이에요. ${esc(LAUNCH_GU)} 코스를 먼저 보여드려요</p>` : ""}
-        ${top.length ? courseList(top) : emptyHtml("map", "아직 코스가 없어요", "첫 코스를 제보해주세요")}
-      </section>
-      <a class="cta-card" href="#/submit"><span class="cta-ic">${ic("send", 20)}</span><div><b>나만 아는 코스가 있어요</b><p class="muted tiny">제보하면 승인 후 모두에게 보여져요</p></div>${ic("chev", 18, "chev")}</a>
     `, "home"));
     syncRewards().then(refreshBell);
   }
@@ -905,7 +881,6 @@
     list.sort((a, b) => (votes[a.id] ? 1 : 0) - (votes[b.id] ? 1 : 0));
     paint(t, page(`
       ${header("투표", { right: `<a class="link" href="#/style/history">내 선택</a>` })}
-      <p class="muted">고민되는 건 또래한테 물어봐요. 결과는 투표하면 보여요</p>
       <div class="cat-row">${[["all", "전체"], ...Object.entries(CATS)].map(([k, l]) => `<a href="#/style?cat=${k}" class="chip ${cat === k ? "on" : ""}">${k === "all" ? "" : art(window.TSArt.CAT[k], "a-chip")}${l}</a>`).join("")}</div>
       ${list.length ? list.map(p => pollCard(p, !!votes[p.id])).join("") : emptyHtml("vote", "아직 투표가 없어요", "곧 새 투표가 올라와요")}
     `, "style"));
@@ -1007,6 +982,7 @@
       <div class="cb-total"><span>합계 <small>${md(p.createdAt)} 기준 · 매장마다 달라요</small></span><b class="num">${won(comboTotal(p))}</b></div>
     </div>`;
   }
+  const praiseSum = p => praiseOf(p).filter(([k]) => (p.praise || {})[k]).map(([k, l]) => `${l} <b class="num">${p.praise[k]}</b>`).join("<i></i>");
   function feedCard(p, ctx) {
     const isVote = p.type === "vote";
     const mine = isVote && p.pollId ? ctx.votes[p.pollId] : null;
@@ -1018,15 +994,16 @@
          ${p.courseId ? `<a class="course-chip" href="#/course/${encodeURIComponent(p.courseId)}">${ic("pin", 15)}<span>${esc(p.courseTitle)}</span>${ic("chev", 15)}</a>` : ""}`;
     return `<article class="post" data-pid="${esc(p.id)}">
       <header class="post-head"><a class="post-author" href="#/u/${encodeURIComponent(p.uid)}">${avatarHtml(ctx.pubs[p.uid], 36)}
-        <div class="grow"><div class="name-line">${authorLine(ctx.pubs[p.uid], p.nickname)}</div><p class="muted tiny">${isVote ? (CATS[p.cat] || "기타") + " 투표" : p.type === "combo" ? "꿀조합 · " + esc(STORES[p.store] || "") : "코스 후기"} · ${ago(p.approvedAt || p.createdAt)}${p.editedAt ? " · 수정됨" : ""}</p></div></a>
+        <div class="grow"><div class="name-line">${authorLine(ctx.pubs[p.uid], p.nickname)}</div><p class="post-meta"><span>${isVote ? (CATS[p.cat] || "기타") + " 투표" : p.type === "combo" ? esc(STORES[p.store] || "") + " 꿀조합" : "코스 후기"}</span><span>${ago(p.approvedAt || p.createdAt)}</span>${p.editedAt ? "<span>수정됨</span>" : ""}</p></div></a>
         <button class="icon-btn" data-more aria-label="더보기">${ic("more", 20)}</button></header>
       ${body}
       ${p.text ? `<p class="post-text">${esc(p.text)}</p>` : ""}
       <footer class="post-actions">
         <button class="like ${p.myLike ? "on" : ""}" data-like aria-label="좋아요">${ic("heart", 24)}<span class="num">${p.likes || ""}</span></button>
+        <button class="praise-btn ${p.myPraise ? "on" : ""}" data-praise-open>${p.myPraise ? esc((praiseOf(p).find(x => x[0] === p.myPraise) || [0, "칭찬"])[1]) : "칭찬하기"}</button>
         <button class="icon-btn bm ${ctx.saved.has(p.id) ? "on" : ""}" data-save aria-label="저장">${ic("bookmark", 22)}</button>
       </footer>
-      <div class="praise">${praiseOf(p).map(([k, l]) => `<button class="pchip ${p.myPraise === k ? "on" : ""}" data-praise="${k}">${l}<em class="num">${(p.praise || {})[k] || ""}</em></button>`).join("")}</div>
+      <p class="praise-sum">${praiseSum(p)}</p>
     </article>`;
   }
   function bindFeed(posts, ctx) {
@@ -1039,15 +1016,23 @@
         likeBtn.classList.toggle("on", on); likeBtn.querySelector("span").textContent = p.likes || "";
         try { await S.store.react(p.id, { like: on }); } catch (e) { toast("반영에 실패했어요"); }
       };
-      el.querySelectorAll("[data-praise]").forEach(b => (b.onclick = async () => {
-        const k = b.dataset.praise, prev = p.myPraise, next = prev === k ? null : k;
-        p.praise = { ...(p.praise || {}) };
-        if (prev) p.praise[prev] = Math.max(0, (p.praise[prev] || 1) - 1);
-        if (next) p.praise[next] = (p.praise[next] || 0) + 1;
-        p.myPraise = next;
-        el.querySelectorAll("[data-praise]").forEach(x => { x.classList.toggle("on", x.dataset.praise === next); x.querySelector("em").textContent = p.praise[x.dataset.praise] || ""; });
-        try { await S.store.react(p.id, { praise: next }); } catch (e) { toast("반영에 실패했어요"); }
-      }));
+      el.querySelector("[data-praise-open]").onclick = () => {
+        const sh = openModal(`<h3>칭찬 보내기</h3><p class="muted tiny">하나만 고를 수 있어요. 다시 누르면 취소돼요</p>
+          <div class="praise-pick">${praiseOf(p).map(([k, l]) => `<button class="choice ${p.myPraise === k ? "on" : ""}" data-pr="${k}">${l}<span class="num muted">${(p.praise || {})[k] || ""}</span></button>`).join("")}</div>
+          <button class="btn ghost block" data-act="close-modal">닫기</button>`);
+        sh.querySelectorAll("[data-pr]").forEach(b => (b.onclick = async () => {
+          const k = b.dataset.pr, prev = p.myPraise, next = prev === k ? null : k;
+          p.praise = { ...(p.praise || {}) };
+          if (prev) p.praise[prev] = Math.max(0, (p.praise[prev] || 1) - 1);
+          if (next) p.praise[next] = (p.praise[next] || 0) + 1;
+          p.myPraise = next; closeModal();
+          const btn = el.querySelector("[data-praise-open]");
+          btn.classList.toggle("on", !!next); btn.textContent = next ? (praiseOf(p).find(x => x[0] === next) || [0, "칭찬"])[1] : "칭찬하기";
+          el.querySelector(".praise-sum").innerHTML = praiseSum(p);
+          if (next) toast("칭찬을 보냈어요");
+          try { await S.store.react(p.id, { praise: next }); } catch (e) { toast("반영에 실패했어요"); }
+        }));
+      };
       const sv = el.querySelector("[data-save]");
       sv.onclick = async () => {
         try { const on = await S.store.toggleSave("post", p.id); sv.classList.toggle("on", on); toast(on ? "저장했어요" : "저장을 취소했어요"); } catch (e) { toast("저장에 실패했어요"); }
@@ -1145,8 +1130,8 @@
     const ctx = await feedContext(posts);
     paint(t, page(`
       ${header("피드", { right })}
-      <div class="seg">${[["all", "전체"], ["vote", "투표"], ["review", "후기"], ["combo", "꿀조합"]].map(([k, l]) => `<a href="#/feed?f=${k}&sort=${sort}" class="${f === k ? "on" : ""}">${l}</a>`).join("")}</div>
-      <div class="sort-row">${[["new", "최신순"], ["hot", "인기순"]].map(([k, l]) => `<a href="#/feed?f=${f}&sort=${k}" class="${sort === k ? "on" : ""}">${l}</a>`).join("")}</div>
+      <div class="filter-row"><div class="cat-row">${[["all", "전체"], ["vote", "투표"], ["review", "후기"], ["combo", "꿀조합"]].map(([k, l]) => `<a href="#/feed?f=${k}&sort=${sort}" class="chip ${f === k ? "on" : ""}">${l}</a>`).join("")}</div>
+        <a class="sort-toggle" href="#/feed?f=${f}&sort=${sort === "new" ? "hot" : "new"}">${ic("sort", 15)}${sort === "new" ? "최신순" : "인기순"}</a></div>
       ${posts.length ? `<div class="feed">${posts.map(p => feedCard(p, ctx)).join("")}</div><p class="tiny muted center feed-end">모든 게시물을 봤어요</p>`
         : emptyHtml("image", "아직 게시물이 없어요", "첫 사진을 올려보세요", `<button class="btn sm" id="up2">게시물 올리기</button>`)}
     `, "feed"), () => {
@@ -1215,7 +1200,6 @@
     const q2 = (k, v) => `#/combo?s=${k === "s" ? v : st}&sort=${k === "sort" ? v : sort}`;
     paint(t, page(`
       ${header("꿀조합", { right })}
-      <p class="muted">또래가 직접 먹어본 편의점·디저트 조합</p>
       <div class="cat-row">${[["all", "전체"], ...Object.entries(STORES)].map(([k, l]) => `<a href="${q2("s", k)}" class="chip ${st === k ? "on" : ""}">${l}</a>`).join("")}</div>
       <div class="sort-row">${[["hot", "인기순"], ["new", "최신순"]].map(([k, l]) => `<a href="${q2("sort", k)}" class="${sort === k ? "on" : ""}">${l}</a>`).join("")}</div>
       ${list.length ? list.map((c, i) => comboCard(c, sort === "hot" && comboScore(c) > 0 && i < 3 ? i + 1 : 0)).join("")
@@ -1805,7 +1789,7 @@
     const [reviews, subs, posts] = await Promise.all([S.store.myReviews(), S.store.mySubmissions(), S.store.myPosts()]);
     const p = S.profile;
     paint(t, page(`
-      ${header("마이", { right: `<a class="icon-btn" href="#/settings" aria-label="설정">${ic("settings", 22)}</a>` })}
+      ${header("마이", { right: `${demoBadge()}<a class="icon-btn" href="#/settings" aria-label="설정">${ic("settings", 22)}</a>` })}
       <section class="card profile-card">
         <div class="profile">
           <a href="#/u/${encodeURIComponent(S.user.uid)}">${avatarHtml(S.pub, 64)}</a>
