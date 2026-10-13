@@ -567,6 +567,7 @@
     if (!local.length) { local = courses.filter(c => c.gu === LAUNCH_GU); fallback = true; }
     const top = popular(local).slice(0, 3);
     const nextPoll = polls.filter(notFood).find(p => !votes[p.id] && !isEnded(p));
+    const chal = await challengeState();
     paint(t, page(`
       ${header("", { brand: true, right: `<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>${bellHtml()}` })}
       <section class="hero hero2">
@@ -579,6 +580,8 @@
           <a href="#/combo">${art("store", "a-q")}<b>꿀조합</b></a>
         </div>
       </section>
+      ${streakCard()}
+      ${challengeCard(chal)}
       <section>
         <div class="sec-head"><h2>오늘의 투표</h2><a href="#/style" class="more-link">더보기${ic("chev", 14)}</a></div>
         ${nextPoll ? pollTeaser(nextPoll, polls.filter(notFood).filter(p => !votes[p.id] && !isEnded(p)).length) : emptyHtml("checkCircle", "모든 투표에 참여했어요", "새 투표가 올라오면 알려드릴게요", `<a class="btn ghost sm" href="#/style/history">내 선택 보기</a>`)}
@@ -591,7 +594,21 @@
         <div class="sec-head"><h2>${fallback ? esc(LAUNCH_GU) : esc(gu)} 인기 코스</h2><a href="#/spot/list" class="more-link">더보기${ic("chev", 14)}</a></div>
         ${top.length ? courseList(top) : emptyHtml("map", "아직 코스가 없어요", "첫 코스를 제보해주세요", `<a class="btn sm" href="#/submit">코스 제보하기</a>`)}
       </section>
-    `, "home"));
+    `, "home"), () => {
+      const cb = $app.querySelector("#checkin");
+      if (cb) cb.onclick = async () => {
+        cb.disabled = true;
+        const r = await checkIn();
+        toast(r.bonus ? `${r.n}일 연속 출석! +${r.got + r.bonus}P` : `출석 완료 +${r.got}P`);
+        const el = $app.querySelector(".streak"); el.outerHTML = streakCard();
+        const fl = $app.querySelector(".streak .flame"); if (fl) fl.classList.add("pop");
+      };
+      const cl = $app.querySelector("#claim");
+      if (cl) cl.onclick = async () => {
+        cl.disabled = true;
+        if (await claimChallenge(chal)) { toast(`챌린지 완료 +${chal.ch.points}P · ${chal.ch.itemLabel}`); $app.querySelector(".challenge").outerHTML = challengeCard({ ...chal, claimed: true }); }
+      };
+    });
     syncRewards().then(refreshBell);
   }
 
@@ -1521,7 +1538,7 @@
     return word + (hasFinal ? withF : without);
   }
   /* ---------- 포인트 ---------- */
-  const EARN = { checkin: [10, "출석 체크"], vote: [2, "투표 참여"], review: [10, "후기 작성"], post: [20, "게시물 공개"], sub: [30, "코스 제보 공개"] };
+  const EARN = { checkin: [10, "출석 체크"], streak3: [10, "3일 연속 출석"], streak7: [30, "7일 연속 출석"], streak30: [100, "30일 연속 출석"], vote: [2, "투표 참여"], review: [10, "후기 작성"], post: [20, "게시물 공개"], sub: [30, "코스 제보 공개"] };
   const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
   const pts = () => (S.profile && S.profile.points) || 0;
   const ownedSet = () => new Set((S.profile && S.profile.owned) || []);
@@ -1541,12 +1558,89 @@
     return true;
   }
   async function grantFree(itemKey) { if (!ownedSet().has(itemKey)) await savePts({ owned: [...ownedSet(), itemKey] }); }
+  /* ---------- 연속 출석 ---------- */
+  const dayStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const checkedDays = () => new Set(Object.keys((S.profile && S.profile.rewards) || {}).filter(k => k.indexOf("checkin:") === 0).map(k => k.slice(8)));
+  // 오늘 출석했으면 오늘부터, 아니면 어제부터 거꾸로 이어진 날 수
+  function streakInfo() {
+    const days = checkedDays(), today = new Date(), done = days.has(dayStr(today));
+    let n = 0, d = done ? today : addDays(today, -1);
+    while (days.has(dayStr(d))) { n++; d = addDays(d, -1); }
+    const start = dayStr(addDays(done ? today : addDays(today, -1), -(n - 1)));
+    return { n, done, start, days };
+  }
+  const MILESTONES = [[3, "streak3"], [7, "streak7"], [30, "streak30"]];
+  async function checkIn() {
+    const got = await award("checkin", todayStr());
+    if (!got) return { got: 0, bonus: 0 };
+    const st = streakInfo(); let bonus = 0;
+    for (const [n, type] of MILESTONES) if (st.n >= n) bonus += await award(type, st.start);
+    return { got, bonus, n: st.n };
+  }
+  const FLAME = on => `<svg class="flame ${on ? "on" : ""}" viewBox="0 0 48 56" aria-hidden="true"><path d="M24 2c3 9 14 15 14 30 0 11-6 20-14 20S10 43 10 32c0-6 3-11 6-14 0 5 2 8 5 9-1-9 1-17 3-25z" fill="${on ? "#FFB020" : "#D3D9E3"}"/><path d="M24 26c2 5 8 8 8 15 0 6-4 10-8 10s-8-4-8-10c0-4 2-6 4-8 0 3 1 4 3 5 0-5 0-8 1-12z" fill="${on ? "#FFE066" : "#E8ECF3"}"/></svg>`;
+  function streakCard() {
+    const st = streakInfo(), today = new Date();
+    const mon = addDays(today, -((today.getDay() + 6) % 7));
+    const week = Array.from({ length: 7 }, (_, i) => { const d = addDays(mon, i), k = dayStr(d); return { k, label: "월화수목금토일"[i], on: st.days.has(k), today: k === dayStr(today), future: d > today }; });
+    const next = MILESTONES.find(([n]) => n > st.n);
+    const shown = st.done ? st.n : st.n;
+    return `<section class="streak ${st.done ? "done" : ""}">
+      <div class="sk-main">
+        ${FLAME(st.done)}
+        <div class="grow"><b class="sk-n"><span class="num">${shown}</span>일 연속</b>
+          <p class="muted tiny">${st.done ? "오늘 출석 완료. 내일도 이어가요" : st.n ? `오늘 출석하면 ${st.n + 1}일째가 돼요` : "오늘부터 연속 기록을 시작해요"}</p></div>
+        ${st.done ? `<span class="sk-ok">${ic("check", 16)}완료</span>` : `<button class="btn sm sk-btn" id="checkin">출석하기 <b class="num">+${EARN.checkin[0]}P</b></button>`}
+      </div>
+      <div class="sk-week">${week.map(d => `<span class="${d.on ? "on" : ""} ${d.today ? "today" : ""} ${d.future ? "future" : ""}"><i>${d.on ? ic("check", 13) : ""}</i>${d.label}</span>`).join("")}</div>
+      ${next ? `<p class="sk-next"><b class="num">${next[0]}</b>일 연속까지 <b class="num">${next[0] - st.n}</b>일 남았어요 · 보너스 <b class="num">+${EARN[next[1]][0]}P</b></p>` : ""}
+    </section>`;
+  }
+  /* ---------- 이번 주 챌린지 ---------- */
+  const CHALLENGES = [
+    { id: "cheapcombo", title: "3천 원 이하 꿀조합 만들기", desc: "합계 3,000원 이하로 꿀조합을 올려요", art: "store", goal: 1, href: "#/post/new/combo", cta: "꿀조합 올리기", points: 50, item: "pattern:stars", itemLabel: "별 무늬 배경", count: ctx => ctx.posts.filter(p => p.type === "combo" && comboTotal(p) <= 3000).length },
+    { id: "review2", title: "코스 사진 후기 2개 올리기", desc: "이번 주에 다녀온 코스를 사진으로 남겨요", art: "camera", goal: 2, href: "#/post/new/review", cta: "후기 올리기", points: 40, item: "frame:dashed", itemLabel: "점선 테두리", count: ctx => ctx.posts.filter(p => p.type === "review").length },
+    { id: "vote10", title: "투표 10개 참여하기", desc: "친구들 고민에 한 표씩 보태요", art: "ticket", goal: 10, href: "#/style", cta: "투표하러 가기", points: 30, item: "acc:hairpin", itemLabel: "머리핀", count: ctx => ctx.votes },
+    { id: "myvote", title: "내 고민 투표 올리기", desc: "옷이나 놀거리 고민을 투표로 물어봐요", art: "shirt", goal: 1, href: "#/post/new/vote", cta: "투표 올리기", points: 40, item: "acc:flower", itemLabel: "꽃 소품", count: ctx => ctx.posts.filter(p => p.type === "vote").length }
+  ];
+  function weekInfo() {
+    const today = new Date(), mon = addDays(today, -((today.getDay() + 6) % 7)); mon.setHours(0, 0, 0, 0);
+    const idx = Math.floor((mon.getTime() - new Date(2026, 0, 5).getTime()) / (7 * 864e5));
+    return { key: dayStr(mon), from: mon.getTime(), to: addDays(mon, 7).getTime(), left: 7 - ((today.getDay() + 6) % 7), ch: CHALLENGES[((idx % CHALLENGES.length) + CHALLENGES.length) % CHALLENGES.length] };
+  }
+  async function challengeState() {
+    const w = weekInfo();
+    let posts = [];
+    try { posts = (await S.store.myPosts()).filter(p => p.status !== "rejected" && (p.createdAt || 0) >= w.from && (p.createdAt || 0) < w.to); } catch (e) {}
+    const rw = (S.profile && S.profile.rewards) || {};
+    const votes = Object.entries(rw).filter(([k, v]) => k.indexOf("vote:") === 0 && v >= w.from && v < w.to).length;
+    const n = Math.min(w.ch.goal, w.ch.count({ posts, votes }));
+    return { ...w, n, claimed: !!rw["challenge:" + w.key] };
+  }
+  async function claimChallenge(c) {
+    const rw = S.profile.rewards || {}, key = "challenge:" + c.key;
+    if (rw[key]) return false;
+    await savePts({ points: pts() + c.ch.points, rewards: { ...rw, [key]: Date.now() }, owned: [...ownedSet(), c.ch.item], pointLog: [{ label: "이번 주 챌린지", amt: c.ch.points, at: Date.now() }, ...(S.profile.pointLog || [])].slice(0, 30) });
+    return true;
+  }
+  function challengeCard(c) {
+    const ch = c.ch, full = c.n >= ch.goal;
+    return `<section class="challenge">
+      <div class="ch-head"><span class="ch-label">이번 주 챌린지</span><span class="ch-left num">${c.left}일 남음</span></div>
+      <div class="ch-body">${art(ch.art, "a-ch")}<div class="grow"><h3>${esc(ch.title)}</h3><p>${esc(ch.desc)}</p></div></div>
+      <div class="ch-bar"><i style="width:${Math.round((c.n / ch.goal) * 100)}%"></i></div>
+      <div class="ch-meta"><span class="num">${c.n}/${ch.goal}</span><span>보상 <b class="num">+${ch.points}P</b> · ${esc(ch.itemLabel)}</span></div>
+      ${c.claimed ? `<div class="ch-done">${ic("check", 16)}보상을 받았어요. 다음 주 챌린지도 기대해요</div>`
+        : full ? `<button class="btn block ch-btn claim" id="claim">보상 받기</button>`
+        : `<a class="btn block ch-btn" href="${ch.href}">${esc(ch.cta)}</a>`}
+    </section>`;
+  }
   // 출석, 공개된 게시물·제보 보상을 한 번에 확인
   async function syncRewards() {
     if (S.rewardSynced || !S.profile) return;
     S.rewardSynced = true;
     let total = 0;
-    const checkin = await award("checkin", todayStr());
+    const checkin = 0;
     try {
       const [posts, subs] = await Promise.all([S.store.myPosts(), S.store.mySubmissions()]);
       for (const p of posts) if (p.status === "approved") total += await award("post", p.id);
@@ -1569,7 +1663,7 @@
       </section>
       <section>
         <div class="sec-head"><h2>모으는 방법</h2></div>
-        <div class="group earn-list">${Object.entries(EARN).map(([k, [amt, label]]) => `<div class="earn-row"><span>${label}${k === "checkin" ? " (하루 1번)" : k === "vote" ? " (투표마다)" : ""}</span><b class="num">+${amt}P</b></div>`).join("")}</div>
+        <div class="group earn-list">${Object.entries(EARN).map(([k, [amt, label]]) => `<div class="earn-row"><span>${label}${k === "checkin" ? " (홈에서 하루 1번)" : k === "vote" ? " (투표마다)" : ""}</span><b class="num">+${amt}P</b></div>`).join("")}</div>
       </section>
       <section>
         <div class="sec-head"><h2>최근 내역</h2></div>

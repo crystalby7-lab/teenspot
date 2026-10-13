@@ -958,3 +958,47 @@ button.pv-opt.artm:active .art-tile svg { transform: scale(.92); }
 .poll-teaser p { margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pt-go { flex: none; font-size: 12px; font-weight: 700; color: var(--navy); background: var(--accent); padding: 6px 10px; border-radius: 10px; }
 .pt-go b { display: inline; font-size: 12px; }
+
+/* ---------- 연속 출석 ---------- */
+.streak { margin-top: 12px !important; padding: 16px 16px 14px; background: var(--card); border-radius: var(--r-xl); }
+.sk-main { display: flex; align-items: center; gap: 12px; }
+.flame { width: 40px; height: 46px; flex: none; }
+.flame.on { filter: drop-shadow(0 4px 8px rgba(255, 176, 32, .35)); }
+.flame.pop { animation: flamePop .6s var(--ease); }
+@keyframes flamePop { 0% { transform: scale(.6) rotate(-8deg); } 60% { transform: scale(1.18) rotate(4deg); } 100% { transform: scale(1); } }
+.sk-main .grow { min-width: 0; }
+.sk-n { display: block; font-size: 18px; font-weight: 800; letter-spacing: -0.03em; }
+.sk-n .num { font-size: 24px; margin-right: 1px; }
+.streak.done .sk-n .num { color: #E08A00; }
+.sk-main p { margin: 1px 0 0; }
+.sk-btn { flex: none; background: var(--accent); color: var(--navy); gap: 5px; }
+.sk-btn b { font-weight: 700; font-size: 12.5px; opacity: .75; }
+.sk-btn:active { background: #F5C518; }
+.sk-ok { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.sk-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 14px; }
+.sk-week span { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.sk-week i { width: 30px; height: 30px; border-radius: 50%; background: var(--navy-50); display: grid; place-items: center; color: var(--navy); }
+.sk-week span.on i { background: var(--accent); }
+.sk-week span.today i { box-shadow: inset 0 0 0 2px var(--navy); }
+.sk-week span.today { color: var(--ink); }
+.sk-week span.future i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--navy-100); }
+.sk-next { margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--sub); }
+.sk-next b { color: var(--ink); }
+
+/* ---------- 이번 주 챌린지 ---------- */
+.challenge { margin-top: 12px !important; padding: 18px 16px 16px; border-radius: var(--r-xl); background: var(--navy); color: #fff; position: relative; overflow: hidden; isolation: isolate; }
+.challenge::after { content: ""; position: absolute; z-index: -1; right: -40px; top: -50px; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 212, 59, .22), transparent); }
+.ch-head { display: flex; justify-content: space-between; align-items: center; }
+.ch-label { font-size: 12.5px; font-weight: 700; color: var(--accent); }
+.ch-left { font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .6); }
+.ch-body { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.art.a-ch { width: 52px; height: 52px; border-radius: 16px; }
+.ch-body h3 { margin: 0; font-size: 17px; color: #fff; letter-spacing: -0.03em; }
+.ch-body p { margin: 2px 0 0; font-size: 13px; color: rgba(255, 255, 255, .62); }
+.ch-bar { height: 8px; margin-top: 16px; border-radius: 4px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.ch-bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); transition: width .5s var(--ease); }
+.ch-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12.5px; color: rgba(255, 255, 255, .7); font-weight: 600; }
+.ch-meta b { color: var(--accent); }
+.ch-btn { margin-top: 14px; background: #fff; color: var(--navy); }
+.ch-btn.claim { background: var(--accent); }
+.ch-done { display: flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 13px; font-weight: 700; color: var(--accent); }
