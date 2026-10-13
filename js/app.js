@@ -28,7 +28,7 @@
   const pollArtName = p => { for (const k of ["a", "b", "c", "d"]) { const m = p[k] && window.TSArt.match(p[k].label); if (m) return m; } return window.TSArt.match(p.question) || window.TSArt.CAT[p.cat] || "sparkle"; };
   const comboArtNames = p => { const out = []; (p.items || []).forEach(i => { const m = window.TSArt.match(i.name); if (m && !out.includes(m)) out.push(m); }); if (!out.length) out.push(window.TSArt.match(p.title) || (p.store === "cafe" ? "coffee" : "store")); return out.slice(0, 3); };
   const plate = (p, cls) => `<span class="plate ${cls || ""} n${comboArtNames(p).length}">${comboArtNames(p).map(n => art(n, "a-pl")).join("")}</span>`;
-  const STORES = { cu: "CU", gs25: "GS25", seven: "세븐일레븐", emart24: "이마트24", cafe: "카페·디저트", etc: "기타" };
+  const STORES = { delivery: "배달·맛집", cu: "CU", gs25: "GS25", seven: "세븐일레븐", emart24: "이마트24", cafe: "카페·디저트", etc: "기타" };
   const comboTotal = p => (p.items || []).reduce((s, i) => s + (Number(i.price) || 0), 0);
   const md = t => { const d = new Date(t); return `${d.getMonth() + 1}.${d.getDate()}`; };
   const INTERESTS = ["옷", "화장", "머리", "음식", "놀거리"];
@@ -192,6 +192,7 @@
       case "saved": return screenSaved(t, q);
       case "feed": return screenFeed(t, q);
       case "combo": return screenCombo(t, q);
+      case "theme": return screenTheme(t, p[1]);
       case "post":
         if (p[1] === "new") return p[2] === "review" ? screenNewReview(t, q) : p[2] === "combo" ? screenNewCombo(t) : screenNewVote(t);
         if (p[1] === "done") return screenPostDone(t);
@@ -549,6 +550,38 @@
         : `<div class="pc-opts">${optKeys(p).map(k => `<span><em class="num">${KEY_LABEL[k]}</em>${esc(p[k].label)}</span>`).join("")}</div>`}
     </a>`;
   }
+  /* ---------- 테마 모음: 코스와 꿀조합을 상황별로 묶기 ---------- */
+  const hasWord = (text, ws) => ws.some(w => String(text || "").includes(w));
+  const courseText = c => [c.title, ...(c.stops || []).map(s => s.name)].join(" ");
+  const comboText = c => [c.title, ...(c.items || []).map(i => i.name)].join(" ");
+  const THEMES = [
+    { id: "exam", title: "시험 끝난 날", desc: "소리 지르고 맛있는 거 먹기", art: "mic", tone: "#EEF0FA",
+      course: c => hasWord(courseText(c), ["노래", "보드게임", "방탈출"]), combo: c => c.store === "delivery" },
+    { id: "budget", title: "만 원으로 하루", desc: "용돈 아끼면서 알차게", art: "bag", tone: "#FDECE6",
+      course: c => c.total <= 10000, combo: c => comboTotal(c) <= 5000 },
+    { id: "rain", title: "비 오는 날 실내", desc: "밖에 안 나가도 되는 코스와 따끈한 조합", art: "coffee", tone: "#F3EEE8",
+      course: c => hasWord(courseText(c), ["노래", "보드게임", "카페", "빵", "베이커리", "빈티지", "소품"]), combo: c => hasWord(comboText(c), ["라면", "마라", "국물", "떡볶이"]) },
+    { id: "bday", title: "친구 생일", desc: "사진 남기고 다 같이 나눠 먹기", art: "balloon", tone: "#FFF1F3",
+      course: c => hasWord(courseText(c), ["포토", "사진", "노래"]), combo: c => c.store === "delivery" || hasWord(comboText(c), ["케이크", "아이스크림"]) }
+  ];
+  async function themeData(th) {
+    const [courses, feed] = await Promise.all([S.store.listCourses(), S.store.listFeed()]);
+    return { courses: popular(courses.filter(th.course)), combos: comboRank(visible(feed).filter(p => p.type === "combo" && th.combo(p))) };
+  }
+  async function screenTheme(t, id) {
+    const th = THEMES.find(x => x.id === id);
+    if (!th) return go("#/home");
+    paint(t, page(header(th.title, { back: true }) + loadingHtml()));
+    const d = await themeData(th);
+    paint(t, page(`
+      ${header(th.title, { back: true })}
+      <section class="theme-hero" style="--tone:${th.tone}">${art(th.art, "a-theme")}<div><h1>${esc(th.title)}</h1><p>${esc(th.desc)}</p></div></section>
+      <section><div class="sec-head"><h2>코스</h2><span class="muted tiny num">${d.courses.length}개</span></div>
+        ${d.courses.length ? courseList(d.courses) : emptyHtml("map", "아직 맞는 코스가 없어요", "", `<a class="btn sm" href="#/submit">코스 제보하기</a>`)}</section>
+      <section><div class="sec-head"><h2>꿀조합</h2><span class="muted tiny num">${d.combos.length}개</span></div>
+        ${d.combos.length ? d.combos.map(c => comboCard(c, 0)).join("") : emptyHtml("combo", "아직 맞는 꿀조합이 없어요", "", `<a class="btn sm" href="#/post/new/combo">꿀조합 올리기</a>`)}</section>
+    `));
+  }
   // 홈용 투표 미리보기: 질문과 선택지만 한 줄로
   function pollTeaser(p, left) {
     return `<a class="poll-teaser" href="#/style">
@@ -568,6 +601,7 @@
     const top = popular(local).slice(0, 3);
     const nextPoll = polls.filter(notFood).find(p => !votes[p.id] && !isEnded(p));
     const chal = await challengeState();
+    const themes = THEMES.map(th => ({ th, n: { c: courses.filter(th.course).length, b: visible(feed).filter(p => p.type === "combo" && th.combo(p)).length } }));
     paint(t, page(`
       ${header("", { brand: true, right: `<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>${bellHtml()}` })}
       <section class="hero hero2">
@@ -583,16 +617,8 @@
       ${streakCard()}
       ${challengeCard(chal)}
       <section>
-        <div class="sec-head"><h2>오늘의 투표</h2><a href="#/style" class="more-link">더보기${ic("chev", 14)}</a></div>
-        ${nextPoll ? pollTeaser(nextPoll, polls.filter(notFood).filter(p => !votes[p.id] && !isEnded(p)).length) : emptyHtml("checkCircle", "모든 투표에 참여했어요", "새 투표가 올라오면 알려드릴게요", `<a class="btn ghost sm" href="#/style/history">내 선택 보기</a>`)}
-      </section>
-      ${combos.length ? `<section>
-        <div class="sec-head"><h2>요즘 뜨는 꿀조합</h2><a href="#/combo" class="more-link">더보기${ic("chev", 14)}</a></div>
-        <div class="group">${combos.map((c, i) => comboRow(c, i)).join("")}</div>
-      </section>` : ""}
-      <section>
-        <div class="sec-head"><h2>${fallback ? esc(LAUNCH_GU) : esc(gu)} 인기 코스</h2><a href="#/spot/list" class="more-link">더보기${ic("chev", 14)}</a></div>
-        ${top.length ? courseList(top) : emptyHtml("map", "아직 코스가 없어요", "첫 코스를 제보해주세요", `<a class="btn sm" href="#/submit">코스 제보하기</a>`)}
+        <div class="sec-head"><h2>이번 주 테마</h2></div>
+        <div class="themes">${themes.map(({ th, n }) => `<a class="theme-card" href="#/theme/${th.id}" style="--tone:${th.tone}">${art(th.art, "a-theme")}<b>${esc(th.title)}</b><span>${esc(th.desc)}</span><small class="num">코스 ${n.c} · 꿀조합 ${n.b}</small></a>`).join("")}</div>
       </section>
     `, "home"), () => {
       const cb = $app.querySelector("#checkin");

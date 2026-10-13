@@ -2,7 +2,7 @@
 (function () {
   const CFG = window.TS_CONFIG || {};
   const SEED = window.TS_SEED || { courses: [], polls: [] };
-  const SEED_V = 5; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
+  const SEED_V = 6; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
   const useFirebase = !!(CFG.firebase && CFG.firebase.apiKey);
   const now = () => Date.now();
   const rid = () => Math.random().toString(36).slice(2, 9) + now().toString(36);
@@ -24,7 +24,7 @@
   }
   function countChoices(arr) { const r = { total: arr.length }; OPT_KEYS.forEach(k => (r[k] = arr.filter(x => x === k).length)); return r; }
   // 꿀조합: 어디서, 이름, 재료(2~6개, 이름·가격)
-  const STORES = ["cu", "gs25", "seven", "emart24", "cafe", "etc"];
+  const STORES = ["delivery", "cu", "gs25", "seven", "emart24", "cafe", "etc"];
   function comboFields(p) {
     return {
       store: STORES.includes(p.store) ? p.store : "etc",

@@ -1002,3 +1002,16 @@ button.pv-opt.artm:active .art-tile svg { transform: scale(.92); }
 .ch-btn { margin-top: 14px; background: #fff; color: var(--navy); }
 .ch-btn.claim { background: var(--accent); }
 .ch-done { display: flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 13px; font-weight: 700; color: var(--accent); }
+
+/* ---------- 이번 주 테마 ---------- */
+.themes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.theme-card { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 16px 14px 14px; border-radius: var(--r-lg); background: linear-gradient(160deg, #FFFFFF 30%, var(--tone)); min-height: 152px; transition: transform .12s var(--ease); }
+.theme-card:active { transform: scale(.97); }
+.theme-card .art.a-theme { width: 46px; height: 46px; border-radius: 15px; margin-bottom: 8px; background: #fff; box-shadow: 0 6px 14px rgba(30, 42, 62, .08); }
+.theme-card b { font-size: 15.5px; font-weight: 800; letter-spacing: -0.03em; }
+.theme-card span { font-size: 12.5px; color: var(--sub); line-height: 1.4; }
+.theme-card small { margin-top: auto; padding-top: 8px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.theme-hero { display: flex; align-items: center; gap: 14px; margin-top: 6px !important; padding: 20px 18px; border-radius: var(--r-xl); background: linear-gradient(150deg, #FFFFFF, var(--tone)); }
+.theme-hero .art.a-theme { width: 64px; height: 64px; border-radius: 20px; background: #fff; box-shadow: 0 8px 18px rgba(30, 42, 62, .08); }
+.theme-hero h1 { font-size: 22px; letter-spacing: -0.04em; }
+.theme-hero p { margin: 2px 0 0; color: var(--sub); font-size: 14px; }
