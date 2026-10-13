@@ -19,7 +19,9 @@
   const pct = (x, t) => (t ? Math.round((x / t) * 100) : 0);
   const fmtDate = t => { const d = new Date(t); return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`; };
   const GU_LIST = ["강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구", "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"];
-  const CATS = { outfit: "옷", makeup: "화장", hair: "머리", food: "음식", play: "놀거리", etc: "기타" };
+  const CATS = { outfit: "옷", makeup: "화장", hair: "머리", play: "놀거리", etc: "기타" };
+  // 음식 고민은 꿀조합에서만: 투표 목록·피드·홈에서 음식 투표는 숨겨요
+  const notFood = p => !(p && p.cat === "food" && (p.type === "vote" || p.question));
   // 일러스트
   const art = (name, cls, plain) => window.TSArt.icon(name, cls, plain);
   const artFor = (text, cls, plain) => window.TSArt.iconFor(text, cls, plain);
@@ -113,7 +115,7 @@
     return `<nav class="tabbar">${tabs.map(([k, i, l]) => `<a href="#/${k}" class="${active === k ? "on" : ""}" ${active === k ? 'aria-current="page"' : ""}><span class="tab-ic">${ic(i, 23)}</span><span>${l}</span></a>`).join("")}</nav>`;
   }
   const demoBadge = () => (S.store && S.store.mode === "demo" ? `<span class="badge-demo">체험 모드</span>` : "");
-  function page(inner, tab, bar) { return `<div class="page ${tab ? "has-tab" : ""} ${bar ? "has-bar" : ""}">${inner}</div>${tab ? tabbar(tab) : ""}`; }
+  function page(inner, tab, bar) { return `<div class="page ${tab ? "has-tab" : ""} ${bar ? "has-bar" : ""}" ${tab ? `data-tab="${tab}"` : ""}>${inner}</div>${tab ? tabbar(tab) : ""}`; }
 
   document.addEventListener("click", e => {
     const a = e.target.closest("[data-act]");
@@ -547,6 +549,14 @@
         : `<div class="pc-opts">${optKeys(p).map(k => `<span><em class="num">${KEY_LABEL[k]}</em>${esc(p[k].label)}</span>`).join("")}</div>`}
     </a>`;
   }
+  // 홈용 투표 미리보기: 질문과 선택지만 한 줄로
+  function pollTeaser(p, left) {
+    return `<a class="poll-teaser" href="#/style">
+      ${hasImgs(p) ? `<span class="vr-thumb">${imgTag(p.a.img, p.a.label)}</span>` : art(pollArtName(p), "a-row")}
+      <div class="grow"><b>${esc(p.question)}</b><p class="muted tiny">${optKeys(p).map(k => esc(p[k].label)).join(" vs ")}</p></div>
+      <span class="pt-go"><b class="num">${left}</b>개 투표하기</span>
+    </a>`;
+  }
   const popular = arr => [...arr].sort((a, b) => b.recCount - a.recCount || b.reviewCount - a.reviewCount || (b.createdAt || 0) - (a.createdAt || 0));
   async function screenHome(t) {
     paint(t, page(header("", { brand: true }) + loadingHtml(), "home"));
@@ -556,22 +566,22 @@
     let local = courses.filter(c => c.gu === gu), fallback = false;
     if (!local.length) { local = courses.filter(c => c.gu === LAUNCH_GU); fallback = true; }
     const top = popular(local).slice(0, 3);
-    const nextPoll = polls.find(p => !votes[p.id]);
+    const nextPoll = polls.filter(notFood).find(p => !votes[p.id] && !isEnded(p));
     paint(t, page(`
       ${header("", { brand: true, right: `<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>${bellHtml()}` })}
       <section class="hero hero2">
         <div class="hero-text"><p>${esc(S.profile.nickname)}님, 오늘은</p><h2>뭐가 고민돼?</h2></div>
         <div class="hero-mascot">${mascot("happy", 54, { inverse: true, shadow: false })}</div>
         <div class="quick">
-          <a href="#/style?cat=food">${art("ramen", "a-q")}<b>뭐 먹지</b></a>
           <a href="#/style?cat=outfit">${art("shirt", "a-q")}<b>뭐 입지</b></a>
-          <a href="#/spot">${art("ticket", "a-q")}<b>어디 가지</b></a>
+          <a href="#/style?cat=play">${art("dice", "a-q")}<b>뭐 하지</b></a>
+          <a href="#/spot">${art("camera", "a-q")}<b>어디 가지</b></a>
           <a href="#/combo">${art("store", "a-q")}<b>꿀조합</b></a>
         </div>
       </section>
       <section>
         <div class="sec-head"><h2>오늘의 투표</h2><a href="#/style" class="more-link">더보기${ic("chev", 14)}</a></div>
-        ${nextPoll ? pollCard(nextPoll, false) : emptyHtml("checkCircle", "모든 투표에 참여했어요", "새 투표가 올라오면 알려드릴게요", `<a class="btn ghost sm" href="#/style/history">내 선택 보기</a>`)}
+        ${nextPoll ? pollTeaser(nextPoll, polls.filter(notFood).filter(p => !votes[p.id] && !isEnded(p)).length) : emptyHtml("checkCircle", "모든 투표에 참여했어요", "새 투표가 올라오면 알려드릴게요", `<a class="btn ghost sm" href="#/style/history">내 선택 보기</a>`)}
       </section>
       ${combos.length ? `<section>
         <div class="sec-head"><h2>요즘 뜨는 꿀조합</h2><a href="#/combo" class="more-link">더보기${ic("chev", 14)}</a></div>
@@ -873,17 +883,48 @@
   /* =========================================================
      5. STYLE
      ========================================================= */
+  // 투표 탭: 한 번에 한 문제씩 크게 + 아래에 전체 목록
   async function screenStyle(t, q) {
-    const cat = q.cat || "all";
+    const cat = CATS[q.cat] ? q.cat : "all";
     paint(t, page(header("투표") + loadingHtml(), "style"));
     const [polls, votes] = await Promise.all([S.store.listPolls(), S.store.myVotes()]);
-    const list = polls.filter(p => cat === "all" || p.cat === cat);
-    list.sort((a, b) => (votes[a.id] ? 1 : 0) - (votes[b.id] ? 1 : 0));
+    const list = polls.filter(notFood).filter(p => cat === "all" || p.cat === cat);
+    const skip = S.voteSkip || (S.voteSkip = new Set());
+    let pending = list.filter(p => !votes[p.id] && !isEnded(p));
+    if (pending.length && pending.every(p => skip.has(p.id))) skip.clear();
+    const focus = pending.find(p => !skip.has(p.id));
+    const rows = [...list].sort((a, b) => (votes[a.id] ? 1 : 0) - (votes[b.id] ? 1 : 0));
+    const state = p => isEnded(p) ? `<span class="vr-state done">마감</span>` : votes[p.id] ? `<span class="vr-state done">완료</span>` : `<span class="vr-state">${p.endsAt ? `<b class="num">${timeLeft(p)}</b>` : "투표"}</span>`;
     paint(t, page(`
       ${header("투표", { right: `<a class="link" href="#/style/history">내 선택</a>` })}
       <div class="cat-row">${[["all", "전체"], ...Object.entries(CATS)].map(([k, l]) => `<a href="#/style?cat=${k}" class="chip ${cat === k ? "on" : ""}">${k === "all" ? "" : art(window.TSArt.CAT[k], "a-chip")}${l}</a>`).join("")}</div>
-      ${list.length ? list.map(p => pollCard(p, !!votes[p.id])).join("") : emptyHtml("vote", "아직 투표가 없어요", "곧 새 투표가 올라와요")}
-    `, "style"));
+      ${focus ? `<section class="vote-focus">
+        <div class="vf-top"><span class="vf-count"><b class="num">${pending.length}</b>개 남았어요</span>${pending.length > 1 ? `<button class="link" id="skip">다음에 할래요</button>` : ""}</div>
+        <div class="vf-card">
+          <span class="pc-cat">${art(window.TSArt.CAT[focus.cat] || "sparkle", "a-chip")}${CATS[focus.cat] || "기타"}</span>
+          <h2 class="vf-q">${esc(focus.question)}</h2>
+          <div class="poll-body pv" id="vf">${voteAreaHtml(focus, null, null)}</div>
+        </div>
+      </section>` : `<section class="vote-done">${mascot("happy", 64, { shadow: false })}<b>${list.length ? "남은 투표를 다 했어요" : "아직 투표가 없어요"}</b><p class="muted tiny">새 투표가 올라오면 여기에 나와요</p></section>`}
+      ${rows.length ? `<section><div class="sec-head"><h2>${cat === "all" ? "모든 투표" : CATS[cat] + " 투표"}</h2><span class="muted tiny num">${rows.length}개</span></div>
+        <div class="group vote-rows">${rows.map(p => `<a class="hist vrow" href="#/poll/${encodeURIComponent(p.id)}">${hasImgs(p) ? `<span class="vr-thumb">${imgTag(p.a.img, p.a.label)}</span>` : art(pollArtName(p), "a-row")}
+          <div class="grow"><b>${esc(p.question)}</b><p class="muted tiny">${optKeys(p).map(k => esc(p[k].label)).join(" vs ")}</p></div>${state(p)}</a>`).join("")}</div></section>` : ""}
+    `, "style"), () => {
+      if (!focus) return;
+      const box = $app.querySelector("#vf"), sk = $app.querySelector("#skip");
+      if (sk) sk.onclick = () => { skip.add(focus.id); render(); };
+      box.querySelectorAll("[data-pick]").forEach(b => (b.onclick = async () => {
+        box.querySelectorAll("[data-pick]").forEach(x => (x.disabled = true)); b.classList.add("picked");
+        try {
+          await S.store.vote(focus.id, b.dataset.pick);
+          const got = await award("vote", focus.id); if (got) toast(`투표 완료 +${got}P`);
+          const r = await S.store.pollResult(focus.id);
+          box.innerHTML = voteAreaHtml(focus, b.dataset.pick, r) + `<button class="btn block lg vf-next" id="next">${pending.length > 1 ? "다음 투표" : "완료"}</button>`;
+          hydrateImages(box);
+          box.querySelector("#next").onclick = () => render();
+        } catch (e) { toast(e.message || "투표에 실패했어요"); box.querySelectorAll("[data-pick]").forEach(x => (x.disabled = false)); }
+      }));
+    });
   }
   async function screenPoll(t, id) {
     paint(t, page(header("투표", { back: true }) + loadingHtml(), "style"));
@@ -892,7 +933,7 @@
     if (!p) return paint(t, page(header("투표", { back: true }) + emptyHtml("alert", "투표를 찾을 수 없어요", "", `<a class="btn sm" href="#/style">투표 목록으로</a>`), "style"));
     let saved = saves.some(s => s.type === "poll" && s.id === id);
     const mine = votes[id];
-    const next = polls.find(x => x.id !== id && !votes[x.id]);
+    const next = polls.filter(notFood).find(x => x.id !== id && !votes[x.id] && !isEnded(x));
     const right = `<button class="icon-btn bm ${saved ? "on" : ""}" id="save" aria-label="저장">${ic("bookmark", 22)}</button><button class="icon-btn" id="more" aria-label="더보기">${ic("more", 22)}</button>`;
     const bindCommon = () => {
       $app.querySelector("#save").onclick = async e => {
@@ -1119,18 +1160,18 @@
     el.querySelector('[data-u="review"]').onclick = () => { closeModal(); go("#/post/new/review" + (courseId ? "?course=" + encodeURIComponent(courseId) : "")); };
   }
   async function screenFeed(t, q) {
-    const f = ["vote", "review", "combo"].includes(q.f) ? q.f : "all";
+    const f = ["vote", "review"].includes(q.f) ? q.f : "all";
     const sort = q.sort === "hot" ? "hot" : "new";
     const right = `<a class="icon-btn" href="#/search" aria-label="검색">${ic("search", 22)}</a><button class="icon-btn" id="up" aria-label="게시물 올리기">${ic("plus", 24)}</button>`;
     paint(t, page(header("피드", { right }) + loadingHtml(), "feed"));
-    const all = visible(await S.store.listFeed());
+    const all = visible(await S.store.listFeed()).filter(notFood).filter(p => p.type !== "combo");
     const score = p => (p.likes || 0) * 2 + Object.values(p.praise || {}).reduce((a, b) => a + b, 0);
     let posts = all.filter(p => f === "all" || p.type === f);
     if (sort === "hot") posts = [...posts].sort((a, b) => score(b) - score(a) || (b.approvedAt || b.createdAt) - (a.approvedAt || a.createdAt));
     const ctx = await feedContext(posts);
     paint(t, page(`
       ${header("피드", { right })}
-      <div class="filter-row"><div class="cat-row">${[["all", "전체"], ["vote", "투표"], ["review", "후기"], ["combo", "꿀조합"]].map(([k, l]) => `<a href="#/feed?f=${k}&sort=${sort}" class="chip ${f === k ? "on" : ""}">${l}</a>`).join("")}</div>
+      <div class="filter-row"><div class="cat-row">${[["all", "전체"], ["vote", "투표"], ["review", "코스 후기"]].map(([k, l]) => `<a href="#/feed?f=${k}&sort=${sort}" class="chip ${f === k ? "on" : ""}">${l}</a>`).join("")}</div>
         <a class="sort-toggle" href="#/feed?f=${f}&sort=${sort === "new" ? "hot" : "new"}">${ic("sort", 15)}${sort === "new" ? "최신순" : "인기순"}</a></div>
       ${posts.length ? `<div class="feed">${posts.map(p => feedCard(p, ctx)).join("")}</div><p class="tiny muted center feed-end">모든 게시물을 봤어요</p>`
         : emptyHtml("image", "아직 게시물이 없어요", "첫 사진을 올려보세요", `<button class="btn sm" id="up2">게시물 올리기</button>`)}

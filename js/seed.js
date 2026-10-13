@@ -104,12 +104,10 @@ window.TS_SEED = {
     }
   ],
   polls: [
-    { id: "q-01", cat: "food", question: "학원 끝나고 뭐 먹지?", a: { label: "마라탕", img: "" }, b: { label: "떡볶이", img: "" }, c: { label: "편의점 라면", img: "" }, d: { label: "김밥", img: "" } },
     { id: "q-02", cat: "play", question: "이번 주말 신촌에서 뭐 할까?", a: { label: "코인노래방", img: "" }, b: { label: "보드게임 카페", img: "" }, c: { label: "포토부스 + 카페", img: "" } },
     { id: "q-03", cat: "outfit", question: "흰 티셔츠엔 어떤 바지?", a: { label: "와이드 데님", img: window.TS_ART["poll-01"][0] }, b: { label: "카고 팬츠", img: window.TS_ART["poll-01"][1] } },
     { id: "q-04", cat: "etc", question: "시험 기간 공부 장소는?", a: { label: "집", img: "" }, b: { label: "스터디카페", img: "" }, c: { label: "도서관", img: "" }, d: { label: "카페", img: "" } },
     { id: "q-05", cat: "makeup", question: "데일리 립 컬러는?", a: { label: "코랄", img: window.TS_ART["poll-04"][0] }, b: { label: "로즈", img: window.TS_ART["poll-04"][1] } },
-    { id: "q-06", cat: "food", question: "편의점 디저트 하나만 고르면?", a: { label: "푸딩", img: "" }, b: { label: "생크림빵", img: "" }, c: { label: "아이스크림", img: "" } },
     { id: "q-07", cat: "outfit", question: "쌀쌀한 날 겉옷은?", a: { label: "바람막이", img: window.TS_ART["poll-03"][0] }, b: { label: "후드 집업", img: window.TS_ART["poll-03"][1] } },
     { id: "q-08", cat: "hair", question: "앞머리 스타일은?", a: { label: "시스루뱅", img: "" }, b: { label: "앞머리 없이", img: "" } },
     { id: "q-09", cat: "play", question: "친구 생일 파티 장소는?", a: { label: "파티룸", img: "" }, b: { label: "방탈출 카페", img: "" }, c: { label: "노래방", img: "" } },
@@ -124,12 +122,10 @@ window.TS_SEED = {
   },
   // 예시 피드 게시물 (TeenSpot 에디터 계정)
   posts: [
-    { id: "q-01", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "food", question: "학원 끝나고 뭐 먹지?", text: "학원 10시에 끝나요. 늦게까지 여는 곳으로", a: { label: "마라탕", img: "" }, b: { label: "떡볶이", img: "" }, c: { label: "편의점 라면", img: "" }, d: { label: "김밥", img: "" } },
     { id: "q-02", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "play", question: "이번 주말 신촌에서 뭐 할까?", text: "3명이고 예산은 1인 1만5천원", a: { label: "코인노래방", img: "" }, b: { label: "보드게임 카페", img: "" }, c: { label: "포토부스 + 카페", img: "" } },
     { id: "q-03", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "outfit", question: "흰 티셔츠엔 어떤 바지?", text: "이번 주 등굣길 코디 고민 중", a: { label: "와이드 데님", img: window.TS_ART["poll-01"][0] }, b: { label: "카고 팬츠", img: window.TS_ART["poll-01"][1] } },
     { id: "q-05", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "makeup", question: "데일리 립 컬러는?", text: "가을에 쓸 립 하나만 고른다면", a: { label: "코랄", img: window.TS_ART["poll-04"][0] }, b: { label: "로즈", img: window.TS_ART["poll-04"][1] } },
     { id: "q-04", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "etc", question: "시험 기간 공부 장소는?", text: "카페는 시끄러울까요?", a: { label: "집", img: "" }, b: { label: "스터디카페", img: "" }, c: { label: "도서관", img: "" }, d: { label: "카페", img: "" } },
-    { id: "q-06", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "food", question: "편의점 디저트 하나만 고르면?", text: "", a: { label: "푸딩", img: "" }, b: { label: "생크림빵", img: "" }, c: { label: "아이스크림", img: "" } },
     { id: "q-c1", type: "combo", uid: "teenspot", nickname: "TeenSpot 에디터", store: "cu", title: "마크정식", text: "떡볶이 위에 치즈 올리고 전자레인지 1분", items: [{ name: "매운 떡볶이 컵", price: 2500 }, { name: "스파게티 컵라면", price: 1500 }, { name: "소시지", price: 1500 }, { name: "스트링치즈", price: 1200 }], images: [] },
     { id: "q-c2", type: "combo", uid: "teenspot", nickname: "TeenSpot 에디터", store: "gs25", title: "치즈 라볶이", text: "라면 사리는 반만 넣어야 안 퍼져요", items: [{ name: "떡볶이 컵", price: 2500 }, { name: "라면 사리", price: 900 }, { name: "슬라이스 치즈", price: 800 }], images: [] },
     { id: "q-c3", type: "combo", uid: "teenspot", nickname: "TeenSpot 에디터", store: "seven", title: "아이스크림 라떼", text: "컵에 아이스크림 먼저 넣고 커피 붓기", items: [{ name: "바닐라 아이스크림", price: 1500 }, { name: "컵커피", price: 2000 }], images: [] },

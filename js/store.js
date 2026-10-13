@@ -2,7 +2,7 @@
 (function () {
   const CFG = window.TS_CONFIG || {};
   const SEED = window.TS_SEED || { courses: [], polls: [] };
-  const SEED_V = 4; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
+  const SEED_V = 5; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
   const useFirebase = !!(CFG.firebase && CFG.firebase.apiKey);
   const now = () => Date.now();
   const rid = () => Math.random().toString(36).slice(2, 9) + now().toString(36);
