@@ -614,6 +614,35 @@
      ========================================================= */
   const BUDGETS = [[5000, "5천원"], [10000, "1만원"], [15000, "1만5천원"], [20000, "2만원"], [30000, "3만원"], [0, "상관없음"]];
   const HOURS = [[2, "2시간"], [3, "3시간"], [4, "4시간"], [6, "6시간"], [0, "상관없음"]];
+  // 서울 전체 지도: 구 중심 위치를 단순화한 배치 (x: 서→동, y: 북→남, 0~100)
+  const GU_POS = {
+    "도봉구": [57, 7], "노원구": [69, 14], "강북구": [51, 17], "은평구": [29, 22], "성북구": [55, 29], "중랑구": [75, 31], "종로구": [43, 32],
+    "서대문구": [32, 37], "동대문구": [63, 39], "중구": [46, 44], "마포구": [22, 47], "성동구": [58, 50], "광진구": [72, 50], "용산구": [42, 55],
+    "강서구": [8, 47], "영등포구": [26, 63], "양천구": [14, 60], "동작구": [36, 70], "구로구": [13, 72], "강동구": [88, 54],
+    "서초구": [50, 79], "강남구": [62, 72], "송파구": [77, 70], "관악구": [33, 82], "금천구": [20, 84]
+  };
+  function seoulMap(courses, myGu) {
+    const count = {};
+    courses.forEach(c => (count[c.gu] = (count[c.gu] || 0) + 1));
+    const tiles = Object.entries(GU_POS).map(([g, [x, y]]) => {
+      const n = count[g] || 0, cls = [n ? "open" : "", g === myGu ? "mine" : ""].join(" ");
+      return `<button class="sg ${cls}" style="left:${x}%;top:${y}%" data-gu="${g}" aria-label="${g}${n ? ` 코스 ${n}개` : " 준비 중"}">${g.replace(/구$/, "")}${n ? `<em class="num">${n}</em>` : ""}</button>`;
+    }).join("");
+    return `<section class="seoul-wrap">
+      <div class="sec-head"><h2>서울 코스 지도</h2><span class="sg-legend"><i class="open"></i>코스 있음<i class="mine"></i>내 동네</span></div>
+      <div class="seoul">
+        <svg class="seoul-bg" viewBox="0 0 100 92" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M14 14c10-8 26-12 40-12 16 0 28 6 34 16 6 8 10 18 10 30 0 14-4 26-14 34-10 8-26 10-42 10-14 0-26-4-34-12C2 72-2 60 0 46 2 32 6 20 14 14z" fill="#E8EEF6"/>
+          <path d="M-4 34L6 37C12 43 16 50 24 54S36 59 44 60S58 59 66 57S78 52 84 43L104 34" stroke="#CFE0F2" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path d="M-4 34L6 37C12 43 16 50 24 54S36 59 44 60S58 59 66 57S78 52 84 43L104 34" stroke="#E2ECF8" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-dasharray="2 3"/>
+          <path d="M40 22c4-4 10-4 12 0s-2 8-6 8-8-4-6-8zM30 76c4-3 9-2 10 2s-3 6-6 6-6-4-4-8z" fill="#DCEBDF"/>
+        </svg>
+        ${tiles}
+        <span class="seoul-river">한강</span>
+      </div>
+      <p class="tiny muted center">구를 누르면 그 지역으로 찾아요</p>
+    </section>`;
+  }
   // 동네 지도 (서대문구): 위치는 실제 지도를 단순화한 배치
   const AREA_POS = { "홍제": [56, 16], "연희동": [27, 42], "안산": [58, 44], "독립문": [84, 50], "신촌": [30, 76], "이대": [55, 78] };
   function spotMap(courses) {
@@ -656,8 +685,16 @@
       </div>
       <button class="btn block lg" id="find">코스 찾기</button>
       <div class="row gap center mt"><a class="link" href="#/spot/list">전체 코스 보기</a><span class="muted">·</span><a class="link" href="#/submit">코스 제보하기</a></div>
+      ${seoulMap(courses, S.profile.gu)}
       ${spotMap(courses)}
     `, "spot"), () => {
+      $app.querySelectorAll(".sg").forEach(b => (b.onclick = () => {
+        const g = b.dataset.gu, n = courses.filter(c => c.gu === g).length;
+        f.gu = g; $app.querySelector("#gu").value = g;
+        $app.querySelectorAll(".sg").forEach(x => x.classList.toggle("sel", x === b));
+        if (n) go(`#/spot/list?gu=${encodeURIComponent(g)}&people=0&budget=0&hours=0`);
+        else toast(`${g}는 준비 중이에요. 코스를 제보하면 먼저 열려요`);
+      }));
       $app.querySelectorAll("[data-p]").forEach(b => (b.onclick = () => { f.people = Math.max(1, Math.min(10, f.people + Number(b.dataset.p))); $app.querySelector("#pv").textContent = f.people + "명"; }));
       const pick = (id, key) => $app.querySelectorAll(`#${id} .chip`).forEach(b => (b.onclick = () => { f[key] = Number(b.dataset.v); $app.querySelectorAll(`#${id} .chip`).forEach(x => x.classList.toggle("on", x === b)); }));
       pick("bud", "budget"); pick("hrs", "hours");
