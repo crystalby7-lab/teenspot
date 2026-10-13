@@ -1,6 +1,6 @@
 # TeenSpot MVP
 
-어른 리뷰 말고, 또래가 직접 해본 것. 10대 라이프스타일 커뮤니티 (피드 + SPOT + STYLE)
+어른 리뷰 말고, 또래가 직접 해본 것. 10대 라이프스타일 커뮤니티 (피드 + 코스 + 꿀조합 + 투표)
 
 - 바닐라 JS + Firebase(구글 로그인, Firestore) + GitHub Pages
 - `js/config.js`의 firebase 값이 비어 있으면 **체험 모드** (이 기기에만 저장, 누구나 관리자)
@@ -57,5 +57,6 @@ manifest.webmanifest    홈 화면 추가용
 - 게시물은 `posts` 컬렉션에 `pending`으로 저장되고, 관리자 승인 후 `approved`로 피드에 공개돼요
 - 투표 게시물은 승인 시 `polls`에도 같은 ID로 만들어져 투표 탭에 함께 나와요
 - 투표 선택지는 `a`, `b`(필수), `c`, `d`(선택). 사진은 모든 선택지에 넣거나 모두 빼요
+- 꿀조합은 `posts`에 `type: "combo"`로 저장 (store, title, items[이름·가격], images 최대 2장). 꿀조합 탭에서 편의점별·인기순으로 모아 보여줘요
 - 카테고리: outfit 옷, makeup 화장, hair 머리, food 음식, play 놀거리, etc 기타
 - `firestore.rules`가 바뀌면 Firebase 콘솔 규칙 탭에 다시 붙여넣고 게시해야 해요

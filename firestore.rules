@@ -113,7 +113,7 @@ service cloud.firestore {
       allow create: if hasProfile()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.status == 'pending'
-        && request.resource.data.type in ['vote', 'review']
+        && request.resource.data.type in ['vote', 'review', 'combo']
         && request.resource.data.text.size() <= 100;
       // 작성자 글 수정: 공개 후에는 설명만, 공개 전에는 질문·선택지 이름도 (사진은 그대로)
       allow update: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid
@@ -121,7 +121,7 @@ service cloud.firestore {
         && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
           || (resource.data.status != 'approved'
             && request.resource.data.status == 'pending'
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt', 'question', 'a', 'b', 'c', 'd', 'status', 'rejectReason'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt', 'question', 'title', 'a', 'b', 'c', 'd', 'status', 'rejectReason'])
             && sameImg('a') && sameImg('b') && sameImg('c') && sameImg('d'))));
       allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
 

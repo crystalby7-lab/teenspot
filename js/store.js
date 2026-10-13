@@ -2,7 +2,7 @@
 (function () {
   const CFG = window.TS_CONFIG || {};
   const SEED = window.TS_SEED || { courses: [], polls: [] };
-  const SEED_V = 3; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
+  const SEED_V = 4; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
   const useFirebase = !!(CFG.firebase && CFG.firebase.apiKey);
   const now = () => Date.now();
   const rid = () => Math.random().toString(36).slice(2, 9) + now().toString(36);
@@ -23,8 +23,17 @@
     return o;
   }
   function countChoices(arr) { const r = { total: arr.length }; OPT_KEYS.forEach(k => (r[k] = arr.filter(x => x === k).length)); return r; }
+  // 꿀조합: 어디서, 이름, 재료(2~6개, 이름·가격)
+  const STORES = ["cu", "gs25", "seven", "emart24", "cafe", "etc"];
+  function comboFields(p) {
+    return {
+      store: STORES.includes(p.store) ? p.store : "etc",
+      title: String(p.title || "").trim().slice(0, 20),
+      items: (p.items || []).filter(i => i && String(i.name || "").trim()).slice(0, 6).map(i => ({ name: String(i.name).trim().slice(0, 15), price: Math.max(0, Math.min(100000, Math.round(Number(i.price) || 0))) }))
+    };
+  }
   function cleanPost(p) {
-    const out = { type: p.type === "vote" ? "vote" : "review", text: String(p.text || "").slice(0, 100) };
+    const out = { type: ["vote", "combo"].includes(p.type) ? p.type : "review", text: String(p.text || "").slice(0, 100) };
     if (out.type === "vote") {
       out.cat = p.cat; out.question = String(p.question || "").slice(0, 30);
       OPT_KEYS.forEach((k, i) => {
@@ -32,6 +41,9 @@
         if (i < 2 || (o && String(o.label || "").trim())) out[k] = { label: String((o && o.label) || "").slice(0, 15), img: (o && o.img) || "" };
       });
       out.durationH = [24, 72, 168, 0].includes(Number(p.durationH)) ? Number(p.durationH) : 72;
+    } else if (out.type === "combo") {
+      Object.assign(out, comboFields(p));
+      out.images = (p.images || []).slice(0, 2);
     } else {
       out.courseId = p.courseId; out.courseTitle = p.courseTitle || "";
       out.images = (p.images || []).slice(0, 4);
@@ -45,6 +57,7 @@
       if (f.question != null && String(f.question).trim().length >= 3) out.question = String(f.question).trim().slice(0, 30);
       optKeys(p).forEach(k => { const l = f.labels && String(f.labels[k] || "").trim(); if (l) out[k] = { label: l.slice(0, 15), img: p[k].img || "" }; });
     }
+    if (p.status !== "approved" && p.type === "combo" && f.title != null && String(f.title).trim().length >= 2) out.title = String(f.title).trim().slice(0, 20);
     if (p.status === "rejected") { out.status = "pending"; out.rejectReason = ""; }
     return out;
   }

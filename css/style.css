@@ -694,3 +694,41 @@ button.pv-row:active { transform: scale(.985); background: var(--navy-100); }
 .bell-dot[hidden] { display: none; }
 .strip { scroll-padding-inline: 16px; }
 .review-imgs:empty { display: none; }
+
+/* ---------- 꿀조합 ---------- */
+.tabbar a span:last-child { white-space: nowrap; }
+.combo-card { display: flex; gap: 14px; align-items: stretch; padding: 16px; }
+.combo-card .grow { min-width: 0; }
+.cb-top { display: flex; gap: 6px; }
+.combo-card h3 { margin: 8px 0 4px; font-size: 17px; letter-spacing: -0.03em; }
+.cb-items { margin: 0; font-size: 13.5px; color: var(--sub); font-weight: 600; line-height: 1.5; }
+.cb-items i { font-style: normal; color: var(--navy-300); margin: 0 5px; font-weight: 700; }
+.cb-meta { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.cb-meta > b { font-size: 16px; font-weight: 700; color: var(--ink); }
+.cb-rx { display: inline-flex; gap: 8px; font-size: 12.5px; color: var(--muted); font-weight: 600; margin-left: auto; }
+.cb-rx em { font-style: normal; color: var(--navy); font-weight: 700; margin-left: 3px; }
+.cb-thumb { width: 84px; flex: none; border-radius: 14px; overflow: hidden; background: var(--navy-50); align-self: center; aspect-ratio: 4 / 5; }
+.cb-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.combo-body { padding: 14px 0 0; }
+.combo-body .post-q { padding-bottom: 10px; }
+.cb-list { list-style: none; margin: 0 16px; padding: 4px 14px; background: var(--navy-50); border-radius: 14px; }
+.cb-list li { display: flex; align-items: center; gap: 10px; padding: 10px 0; font-size: 14.5px; font-weight: 600; }
+.cb-list li + li { box-shadow: inset 0 1px 0 var(--navy-100); }
+.cb-list b { font-weight: 700; color: var(--sub); }
+.cb-n { width: 22px; height: 22px; flex: none; border-radius: 7px; background: var(--card); color: var(--navy-500); display: grid; place-items: center; font-size: 11.5px; font-weight: 700; }
+.cb-total { display: flex; align-items: baseline; justify-content: space-between; margin: 10px 16px 0; padding: 0 14px; }
+.cb-total span { font-size: 13.5px; font-weight: 700; color: var(--sub); }
+.cb-total small { font-weight: 500; color: var(--muted); font-size: 11.5px; margin-left: 4px; }
+.cb-total b { font-size: 20px; font-weight: 700; color: var(--ink); }
+.cb-total.form { margin: 12px 0 0; padding: 14px 16px; background: var(--card); border-radius: var(--r-sm); }
+.cb-row .cb-n { background: var(--navy-100); }
+.cb-row .it-price { width: 96px; flex: none; text-align: right; }
+.combo-row { gap: 12px; }
+.combo-row + .combo-row { box-shadow: inset 0 1px 0 var(--line); }
+.cb-rank { width: 26px; height: 26px; flex: none; border-radius: 9px; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.combo-row .grow { min-width: 0; }
+.cb-price { flex: none; font-size: 14.5px; font-weight: 700; }
+.txt-tile.combo { background: var(--accent-soft); color: var(--ink); }
+.txt-tile.combo small, .txt-tile.combo span { color: #A9472E; }
+.strip-item .txt-tile.combo span { color: #A9472E; }
+.seg a { white-space: nowrap; }

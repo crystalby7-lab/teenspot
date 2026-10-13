@@ -20,6 +20,9 @@
   const fmtDate = t => { const d = new Date(t); return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`; };
   const GU_LIST = ["강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구", "금천구", "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구", "서초구", "성동구", "성북구", "송파구", "양천구", "영등포구", "용산구", "은평구", "종로구", "중구", "중랑구"];
   const CATS = { outfit: "옷", makeup: "화장", hair: "머리", food: "음식", play: "놀거리", etc: "기타" };
+  const STORES = { cu: "CU", gs25: "GS25", seven: "세븐일레븐", emart24: "이마트24", cafe: "카페·디저트", etc: "기타" };
+  const comboTotal = p => (p.items || []).reduce((s, i) => s + (Number(i.price) || 0), 0);
+  const md = t => { const d = new Date(t); return `${d.getMonth() + 1}.${d.getDate()}`; };
   const INTERESTS = ["옷", "화장", "머리", "음식", "놀거리"];
   const REPORT_REASONS = ["광고·홍보", "욕설·비하", "개인정보 노출", "사실과 다른 정보", "청소년에게 위험한 장소", "기타"];
   const BANNED = ["운영자", "관리자", "admin", "teenspot", "시발", "씨발", "병신", "fuck"];
@@ -100,7 +103,7 @@
     </header>`;
   }
   function tabbar(active) {
-    const tabs = [["home", "home", "홈"], ["feed", "grid", "피드"], ["spot", "pin", "코스"], ["style", "vote", "투표"], ["me", "user", "마이"]];
+    const tabs = [["home", "home", "홈"], ["feed", "grid", "피드"], ["spot", "pin", "코스"], ["combo", "combo", "꿀조합"], ["style", "vote", "투표"], ["me", "user", "마이"]];
     return `<nav class="tabbar">${tabs.map(([k, i, l]) => `<a href="#/${k}" class="${active === k ? "on" : ""}" ${active === k ? 'aria-current="page"' : ""}><span class="tab-ic">${ic(i, 23)}</span><span>${l}</span></a>`).join("")}</nav>`;
   }
   const demoBadge = () => (S.store && S.store.mode === "demo" ? `<span class="badge-demo">체험 모드</span>` : "");
@@ -180,8 +183,9 @@
       case "poll": return screenPoll(t, p[1]);
       case "saved": return screenSaved(t, q);
       case "feed": return screenFeed(t, q);
+      case "combo": return screenCombo(t, q);
       case "post":
-        if (p[1] === "new") return p[2] === "review" ? screenNewReview(t, q) : screenNewVote(t);
+        if (p[1] === "new") return p[2] === "review" ? screenNewReview(t, q) : p[2] === "combo" ? screenNewCombo(t) : screenNewVote(t);
         if (p[1] === "done") return screenPostDone(t);
         return screenPost(t, p[1]);
       case "me": return p[1] === "edit" ? screenMeEdit(t) : p[1] === "style" ? screenAvatarEdit(t) : screenMe(t);
@@ -530,7 +534,8 @@
     paint(t, page(header("", { brand: true }) + loadingHtml(), "home"));
     const [courses, polls, votes, feed] = await Promise.all([S.store.listCourses(), S.store.listPolls(), S.store.myVotes(), S.store.listFeed()]);
     const gu = S.profile.gu;
-    const strip = visible(feed).slice(0, 8);
+    const strip = visible(feed).filter(p => p.type !== "combo").slice(0, 8);
+    const combos = comboRank(visible(feed).filter(p => p.type === "combo")).slice(0, 3);
     let local = courses.filter(c => c.gu === gu), fallback = false;
     if (!local.length) { local = courses.filter(c => c.gu === LAUNCH_GU); fallback = true; }
     const top = popular(local).slice(0, 3);
@@ -558,6 +563,10 @@
         <div class="sec-head"><h2>오늘의 투표</h2><a href="#/style" class="more-link">더보기${ic("chev", 14)}</a></div>
         ${nextPoll ? pollCard(nextPoll, false) : emptyHtml("checkCircle", "모든 투표에 참여했어요", "새 투표가 올라오면 알려드릴게요", `<a class="btn ghost sm" href="#/style/history">내 선택 보기</a>`)}
       </section>
+      ${combos.length ? `<section>
+        <div class="sec-head"><h2>요즘 뜨는 꿀조합</h2><a href="#/combo" class="more-link">전체${ic("chev", 14)}</a></div>
+        <div class="group">${combos.map((c, i) => comboRow(c, i)).join("")}</div>
+      </section>` : ""}
       <section>
         <div class="sec-head"><h2>새 피드</h2><a href="#/feed" class="more-link">전체${ic("chev", 14)}</a></div>
         ${strip.length ? `<div class="strip">${strip.map(p => `<a class="strip-item" href="#/post/${encodeURIComponent(p.id)}">${postTile(p)}${postThumbRef(p) ? `<span>${esc(postTitle(p))}</span>` : ""}</a>`).join("")}</div>`
@@ -865,6 +874,7 @@
   const PRAISE = {
     vote: [["fit", "잘 어울려"], ["try", "따라 해볼래"], ["sense", "센스 있어"]],
     ask: [["same", "나도 고민이었어"], ["good", "좋은 질문"], ["sense", "센스 있어"]],
+    combo: [["tried", "해봤어요"], ["yum", "맛있어요"], ["want", "먹어볼래"]],
     review: [["go", "가보고 싶어"], ["tip", "꿀팁 고마워"], ["pic", "사진 맛집"]]
   };
   // 스타일 투표는 칭찬, 그 외 결정 투표는 공감 버튼
@@ -882,9 +892,10 @@
   function postTile(p) {
     const ref = postThumbRef(p);
     if (ref) return imgTag(ref, postTitle(p));
+    if (p.type === "combo") return `<div class="txt-tile combo"><small>꿀조합 · ${esc(STORES[p.store] || "")}</small><b>${esc(p.title)}</b><span class="num">${(p.items || []).length}가지 · ${won(comboTotal(p))}</span></div>`;
     return `<div class="txt-tile"><small>${esc(CATS[p.cat] || "투표")}</small><b>${esc(postTitle(p))}</b><span class="num">${optKeys(p).length}지선다</span></div>`;
   }
-  const postTitle = p => (p.type === "vote" ? p.question : p.courseTitle) || "게시물";
+  const postTitle = p => (p.type === "vote" ? p.question : p.type === "combo" ? p.title : p.courseTitle) || "게시물";
   const IMG_LIMIT = () => (S.store.mode === "demo" ? { w: 640, chars: 110000 } : { w: 960, chars: 280000 });
 
   async function feedContext(posts) {
@@ -894,16 +905,25 @@
     const pubs = await S.store.getPublicProfiles([...new Set(posts.map(p => p.uid))]);
     return { votes, results, pubs, saved: new Set(saves.filter(s => s.type === "post").map(s => s.id)) };
   }
+  function comboBody(p) {
+    return `<div class="combo-body">
+      <p class="post-q">${esc(p.title)}</p>
+      <ul class="cb-list">${(p.items || []).map((i, n) => `<li><span class="cb-n num">${n + 1}</span><span class="grow">${esc(i.name)}</span><b class="num">${i.price ? won(i.price) : "-"}</b></li>`).join("")}</ul>
+      <div class="cb-total"><span>합계 <small>${md(p.createdAt)} 기준 · 매장마다 달라요</small></span><b class="num">${won(comboTotal(p))}</b></div>
+    </div>`;
+  }
   function feedCard(p, ctx) {
     const isVote = p.type === "vote";
     const mine = isVote && p.pollId ? ctx.votes[p.pollId] : null;
+    const carousel = imgs => imgs.length ? `<div class="carousel"><div class="track">${imgs.map(ref => `<div class="slide">${imgTag(ref, postTitle(p))}</div>`).join("")}</div>${imgs.length > 1 ? `<div class="cdots">${imgs.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}</div>` : "";
     const body = isVote
       ? `<p class="post-q">${esc(p.question)}</p><div class="pv" data-poll="${esc(p.pollId || "")}">${voteAreaHtml(p, mine, ctx.results[p.pollId])}</div>`
+      : p.type === "combo" ? `${carousel(p.images || [])}${comboBody(p)}`
       : `<div class="carousel"><div class="track">${(p.images || []).map(ref => `<div class="slide">${imgTag(ref, p.courseTitle)}</div>`).join("")}</div>${(p.images || []).length > 1 ? `<div class="cdots">${p.images.map((_, i) => `<i class="${i ? "" : "on"}"></i>`).join("")}</div>` : ""}</div>
          ${p.courseId ? `<a class="course-chip" href="#/course/${encodeURIComponent(p.courseId)}">${ic("pin", 15)}<span>${esc(p.courseTitle)}</span>${ic("chev", 15)}</a>` : ""}`;
     return `<article class="post" data-pid="${esc(p.id)}">
       <header class="post-head"><a class="post-author" href="#/u/${encodeURIComponent(p.uid)}">${avatarHtml(ctx.pubs[p.uid], 36)}
-        <div class="grow"><div class="name-line">${authorLine(ctx.pubs[p.uid], p.nickname)}</div><p class="muted tiny">${isVote ? (CATS[p.cat] || "기타") + " 투표" : "코스 후기"} · ${ago(p.approvedAt || p.createdAt)}${p.editedAt ? " · 수정됨" : ""}</p></div></a>
+        <div class="grow"><div class="name-line">${authorLine(ctx.pubs[p.uid], p.nickname)}</div><p class="muted tiny">${isVote ? (CATS[p.cat] || "기타") + " 투표" : p.type === "combo" ? "꿀조합 · " + esc(STORES[p.store] || "") : "코스 후기"} · ${ago(p.approvedAt || p.createdAt)}${p.editedAt ? " · 수정됨" : ""}</p></div></a>
         <button class="icon-btn" data-more aria-label="더보기">${ic("more", 20)}</button></header>
       ${body}
       ${p.text ? `<p class="post-text">${esc(p.text)}</p>` : ""}
@@ -979,11 +999,13 @@
   // 글 수정: 사진은 그대로, 공개 전에는 질문·선택지 이름도 고칠 수 있어요
   function editPostSheet(p) {
     const early = p.status !== "approved" && p.type === "vote";
+    const earlyCombo = p.status !== "approved" && p.type === "combo";
     const el = openModal(`<h3>글 수정</h3>
-      <p class="muted tiny">${early ? "공개 전이라 질문과 선택지 이름도 고칠 수 있어요" : p.type === "vote" ? "공개된 투표는 설명만 고칠 수 있어요. 질문과 선택지는 투표 결과가 바뀌지 않게 고정돼요" : "사진은 그대로 두고 글만 고쳐요"}</p>
+      <p class="muted tiny">${early ? "공개 전이라 질문과 선택지 이름도 고칠 수 있어요" : earlyCombo ? "공개 전이라 조합 이름도 고칠 수 있어요" : p.type === "vote" ? "공개된 투표는 설명만 고칠 수 있어요. 질문과 선택지는 투표 결과가 바뀌지 않게 고정돼요" : "사진은 그대로 두고 글만 고쳐요"}</p>
       ${early ? `<label class="field"><span>질문</span><input id="e-q" maxlength="30" value="${esc(p.question)}"></label>
         <div class="field"><span>선택지</span><div class="nv-opts">${optKeys(p).map(k => `<input id="e-${k}" maxlength="15" value="${esc(p[k].label)}">`).join("")}</div></div>` : ""}
-      <label class="field"><span>${p.type === "vote" ? "한 줄 설명" : "한 줄 후기"} <small class="muted" id="e-cnt">${(p.text || "").length}/100</small></span><textarea id="e-text" rows="3" maxlength="100">${esc(p.text || "")}</textarea></label>
+      ${earlyCombo ? `<label class="field"><span>조합 이름</span><input id="e-title" maxlength="20" value="${esc(p.title)}"></label>` : ""}
+      <label class="field"><span>${p.type === "vote" ? "한 줄 설명" : p.type === "combo" ? "꿀팁" : "한 줄 후기"} <small class="muted" id="e-cnt">${(p.text || "").length}/100</small></span><textarea id="e-text" rows="3" maxlength="100">${esc(p.text || "")}</textarea></label>
       ${p.status === "rejected" ? `<p class="tiny muted">저장하면 다시 검토 중이 돼요</p>` : ""}
       <div class="row gap"><button class="btn ghost grow" data-act="close-modal">취소</button><button class="btn grow" id="e-ok">저장</button></div>`);
     const tx = el.querySelector("#e-text");
@@ -998,6 +1020,7 @@
         if (new Set(Object.values(f.labels)).size < optKeys(p).length) return toast("같은 선택지가 있어요");
       }
       if (p.type === "review" && f.text.length < 5) return toast("후기를 5자 이상 써주세요");
+      if (earlyCombo) { f.title = el.querySelector("#e-title").value.trim(); if (f.title.length < 2) return toast("조합 이름을 입력해주세요"); }
       e.currentTarget.disabled = true;
       try { await S.store.updatePost(p.id, f); closeModal(); toast("수정했어요"); render(); }
       catch (er) { toast(er.message || "수정에 실패했어요"); e.currentTarget.disabled = false; }
@@ -1007,14 +1030,16 @@
     const el = openModal(`<h3>무엇을 올릴까요?</h3><p class="muted">올린 게시물은 운영자 확인 후 피드에 공개돼요</p>
       <div class="list-choice">
         <button class="choice tall" data-u="vote"><span class="cta-ic">${ic("vote", 20)}</span><div><b>투표 올리기</b><p class="muted tiny">선택지 2~4개, 사진은 넣어도 되고 빼도 돼요</p></div></button>
+        <button class="choice tall" data-u="combo"><span class="cta-ic">${ic("combo", 20)}</span><div><b>꿀조합</b><p class="muted tiny">편의점·디저트 조합, 사진은 선택</p></div></button>
         <button class="choice tall" data-u="review"><span class="cta-ic">${ic("camera", 20)}</span><div><b>코스 사진 후기</b><p class="muted tiny">다녀온 코스 사진 최대 4장</p></div></button>
       </div>
       <button class="btn ghost block" data-act="close-modal">닫기</button>`);
     el.querySelector('[data-u="vote"]').onclick = () => { closeModal(); go("#/post/new/vote"); };
+    el.querySelector('[data-u="combo"]').onclick = () => { closeModal(); go("#/post/new/combo"); };
     el.querySelector('[data-u="review"]').onclick = () => { closeModal(); go("#/post/new/review" + (courseId ? "?course=" + encodeURIComponent(courseId) : "")); };
   }
   async function screenFeed(t, q) {
-    const f = ["vote", "review"].includes(q.f) ? q.f : "all";
+    const f = ["vote", "review", "combo"].includes(q.f) ? q.f : "all";
     const sort = q.sort === "hot" ? "hot" : "new";
     const right = `<a class="icon-btn" href="#/search" aria-label="검색">${ic("search", 22)}</a><button class="icon-btn" id="up" aria-label="게시물 올리기">${ic("plus", 24)}</button>`;
     paint(t, page(header("피드", { right }) + loadingHtml(), "feed"));
@@ -1025,7 +1050,7 @@
     const ctx = await feedContext(posts);
     paint(t, page(`
       ${header("피드", { right })}
-      <div class="seg">${[["all", "전체"], ["vote", "투표"], ["review", "코스 후기"]].map(([k, l]) => `<a href="#/feed?f=${k}&sort=${sort}" class="${f === k ? "on" : ""}">${l}</a>`).join("")}</div>
+      <div class="seg">${[["all", "전체"], ["vote", "투표"], ["review", "후기"], ["combo", "꿀조합"]].map(([k, l]) => `<a href="#/feed?f=${k}&sort=${sort}" class="${f === k ? "on" : ""}">${l}</a>`).join("")}</div>
       <div class="sort-row">${[["new", "최신순"], ["hot", "인기순"]].map(([k, l]) => `<a href="#/feed?f=${f}&sort=${k}" class="${sort === k ? "on" : ""}">${l}</a>`).join("")}</div>
       ${posts.length ? `<div class="feed">${posts.map(p => feedCard(p, ctx)).join("")}</div><p class="tiny muted center feed-end">모든 게시물을 봤어요</p>`
         : emptyHtml("image", "아직 게시물이 없어요", "첫 사진을 올려보세요", `<button class="btn sm" id="up2">게시물 올리기</button>`)}
@@ -1049,6 +1074,124 @@
       ${pending && p.status !== "approved" ? `<p class="hint ${p.status === "rejected" ? "hint-warn" : ""}">${p.status === "rejected" ? `<b>공개되지 않았어요</b><br>${esc(rejectNote(p))}. 내용을 바꿔서 다시 올릴 수 있어요` : "검토 중이에요. 운영자 확인 후 피드에 공개돼요"}</p>` : ""}
       <div class="feed">${feedCard(p, ctx)}</div>
     `), () => bindFeed([p], ctx));
+  }
+
+  /* =========================================================
+     꿀조합
+     ========================================================= */
+  const comboScore = c => { const r = c.praise || {}; return (r.tried || 0) * 2 + (r.yum || 0) * 2 + (r.want || 0) + (c.likes || 0); };
+  const comboRank = arr => [...arr].sort((a, b) => comboScore(b) - comboScore(a) || (b.approvedAt || b.createdAt) - (a.approvedAt || a.createdAt));
+  function comboRx(c) {
+    const r = c.praise || {}, out = [];
+    if (r.tried) out.push(`해봤어요 <em class="num">${r.tried}</em>`);
+    if (r.yum) out.push(`맛있어요 <em class="num">${r.yum}</em>`);
+    return out.length ? `<span class="cb-rx">${out.join("")}</span>` : "";
+  }
+  function comboCard(c, rank) {
+    const img = (c.images || [])[0];
+    return `<a class="card combo-card" href="#/post/${encodeURIComponent(c.id)}">
+      <div class="grow">
+        <div class="cb-top"><span class="tag">${esc(STORES[c.store] || "기타")}</span>${rank ? `<span class="tag new num">TOP ${rank}</span>` : ""}</div>
+        <h3>${esc(c.title)}</h3>
+        <p class="cb-items">${(c.items || []).map(i => esc(i.name)).join(`<i>+</i>`)}</p>
+        <div class="cb-meta"><b class="num">${won(comboTotal(c))}</b>${comboRx(c)}</div>
+      </div>
+      ${img ? `<div class="cb-thumb">${imgTag(img, c.title)}</div>` : ""}
+    </a>`;
+  }
+  function comboRow(c, i) {
+    return `<a class="hist combo-row" href="#/post/${encodeURIComponent(c.id)}"><span class="cb-rank num">${i + 1}</span>
+      <div class="grow"><b>${esc(c.title)}</b><p class="muted tiny">${(c.items || []).map(x => esc(x.name)).join(" + ")}</p></div>
+      <b class="num cb-price">${won(comboTotal(c))}</b></a>`;
+  }
+  async function screenCombo(t, q) {
+    const st = STORES[q.s] ? q.s : "all";
+    const sort = q.sort === "new" ? "new" : "hot";
+    const right = `<button class="icon-btn" id="up" aria-label="꿀조합 올리기">${ic("plus", 24)}</button>`;
+    paint(t, page(header("꿀조합", { right }) + loadingHtml(), "combo"));
+    const all = visible(await S.store.listFeed()).filter(p => p.type === "combo");
+    let list = all.filter(c => st === "all" || c.store === st);
+    list = sort === "hot" ? comboRank(list) : [...list].sort((a, b) => (b.approvedAt || b.createdAt) - (a.approvedAt || a.createdAt));
+    const q2 = (k, v) => `#/combo?s=${k === "s" ? v : st}&sort=${k === "sort" ? v : sort}`;
+    paint(t, page(`
+      ${header("꿀조합", { right })}
+      <p class="muted">또래가 직접 먹어본 편의점·디저트 조합</p>
+      <div class="cat-row">${[["all", "전체"], ...Object.entries(STORES)].map(([k, l]) => `<a href="${q2("s", k)}" class="chip ${st === k ? "on" : ""}">${l}</a>`).join("")}</div>
+      <div class="sort-row">${[["hot", "인기순"], ["new", "최신순"]].map(([k, l]) => `<a href="${q2("sort", k)}" class="${sort === k ? "on" : ""}">${l}</a>`).join("")}</div>
+      ${list.length ? list.map((c, i) => comboCard(c, sort === "hot" && comboScore(c) > 0 && i < 3 ? i + 1 : 0)).join("")
+        : emptyHtml("combo", st === "all" ? "아직 꿀조합이 없어요" : `${STORES[st]} 꿀조합이 아직 없어요`, "첫 꿀조합을 올려보세요")}
+      <a class="cta-card" href="#/post/new/combo"><span class="cta-ic">${ic("plus", 20)}</span><div class="grow"><b>나만 아는 꿀조합이 있어요</b><p class="muted tiny">승인되면 모두에게 보여요 · +${EARN.post[0]}P</p></div>${ic("chev", 18, "chev")}</a>
+    `, "combo"), () => { $app.querySelector("#up").onclick = () => go("#/post/new/combo"); });
+  }
+  function screenNewCombo(t) {
+    const st = { store: "cu", n: 2, images: [] };
+    const MAX = 6;
+    paint(t, page(`
+      ${header("꿀조합 올리기", { back: true })}
+      <div class="field"><span>어디서</span><div class="chips" id="store">${Object.entries(STORES).map(([k, l]) => `<button class="chip ${k === st.store ? "on" : ""}" data-v="${k}">${l}</button>`).join("")}</div></div>
+      <label class="field"><span>조합 이름</span><input id="title" maxlength="20" placeholder="예: 치즈 라볶이"></label>
+      <div class="field"><span>재료 <small class="muted">2~6개 · 가격은 1개 기준</small></span>
+        <div class="nv-opts" id="items">${Array.from({ length: MAX }, (_, i) => `<div class="nv-opt cb-row" data-i="${i}" ${i >= 2 ? "hidden" : ""}>
+          <span class="cb-n num">${i + 1}</span>
+          <input class="it-name" maxlength="15" placeholder="${i === 0 ? "예: 떡볶이 컵" : i === 1 ? "예: 슬라이스 치즈" : "재료 " + (i + 1)}">
+          <input class="it-price num" inputmode="numeric" maxlength="6" placeholder="가격">
+          ${i >= 2 ? `<button class="icon-btn nv-del" data-del="${i}" aria-label="재료 빼기">${ic("x", 16)}</button>` : ""}
+        </div>`).join("")}
+          <button class="nv-add" id="additem">${ic("plus", 16)}재료 추가</button>
+        </div>
+        <div class="cb-total form"><span>합계</span><b class="num" id="sum">0원</b></div>
+      </div>
+      <div class="field"><span>사진 (선택, 최대 2장) <small class="muted" id="pc">0/2</small></span>
+        <div class="photo-grid" id="photos"></div><input type="file" accept="image/*" multiple id="file" hidden></div>
+      <label class="field"><span>꿀팁 (선택) <small class="muted" id="cnt">0/100</small></span><textarea id="text" rows="2" maxlength="100" placeholder="먹는 순서, 비율, 데우는 시간"></textarea></label>
+      <div id="rules" hidden>${photoRules()}</div>
+      <div class="bottom-cta"><button class="btn block lg" id="ok">올리기</button></div>
+    `), () => {
+      const $ = q => $app.querySelector(q);
+      const rows = () => [...$app.querySelectorAll(".cb-row")].slice(0, st.n);
+      const price = el => Number(String(el.value).replace(/[^0-9]/g, "")) || 0;
+      const sync = () => {
+        $app.querySelectorAll(".cb-row").forEach((r, i) => (r.hidden = i >= st.n));
+        $("#additem").hidden = st.n >= MAX;
+        $("#sum").textContent = rows().reduce((s, r) => s + price(r.querySelector(".it-price")), 0).toLocaleString("ko-KR") + "원";
+        $("#rules").hidden = !st.images.length;
+      };
+      $app.querySelectorAll("#store .chip").forEach(b => (b.onclick = () => { st.store = b.dataset.v; $app.querySelectorAll("#store .chip").forEach(x => x.classList.toggle("on", x === b)); }));
+      $app.querySelectorAll(".it-price").forEach(el => (el.oninput = () => { el.value = el.value.replace(/[^0-9]/g, ""); sync(); }));
+      $("#additem").onclick = () => { if (st.n < MAX) { st.n++; sync(); rows()[st.n - 1].querySelector(".it-name").focus(); } };
+      $app.querySelectorAll("[data-del]").forEach(b => (b.onclick = () => {
+        const all = [...$app.querySelectorAll(".cb-row")], i = Number(b.dataset.del);
+        for (let j = i; j < st.n - 1; j++) ["it-name", "it-price"].forEach(c => (all[j].querySelector("." + c).value = all[j + 1].querySelector("." + c).value));
+        ["it-name", "it-price"].forEach(c => (all[st.n - 1].querySelector("." + c).value = ""));
+        st.n--; sync();
+      }));
+      const box = $("#photos"), file = $("#file"), pc = $("#pc");
+      const draw = () => {
+        box.innerHTML = st.images.map((d, i) => `<div class="ph"><img src="${d}" alt=""><button class="ph-x" data-x="${i}" aria-label="사진 빼기">${ic("x", 14)}</button></div>`).join("")
+          + (st.images.length < 2 ? `<button class="ph add" id="add" aria-label="사진 추가">${ic("plus", 22)}</button>` : "");
+        pc.textContent = st.images.length + "/2";
+        box.querySelectorAll("[data-x]").forEach(b => (b.onclick = () => { st.images.splice(Number(b.dataset.x), 1); draw(); sync(); }));
+        const add = box.querySelector("#add"); if (add) add.onclick = () => file.click();
+      };
+      bindPicker(file, 0.8, data => { if (st.images.length < 2) { st.images.push(data); draw(); sync(); } else toast("사진은 2장까지 올릴 수 있어요"); });
+      draw(); sync();
+      const tx = $("#text"), cnt = $("#cnt");
+      tx.oninput = () => (cnt.textContent = tx.value.length + "/100");
+      $("#ok").onclick = async e => {
+        const title = $("#title").value.trim();
+        const items = rows().map(r => ({ name: r.querySelector(".it-name").value.trim(), price: price(r.querySelector(".it-price")) }));
+        if (title.length < 2) return toast("조합 이름을 입력해주세요");
+        if (items.some(i => !i.name)) return toast("재료 이름을 모두 입력해주세요");
+        if (st.images.length && !$("#rule").checked) return toast("사진 확인에 체크해주세요");
+        const btn = e.currentTarget; btn.disabled = true; btn.textContent = "올리는 중...";
+        try {
+          const images = [];
+          for (const d of st.images) images.push(await S.store.uploadImage(d));
+          await S.store.createPost({ type: "combo", store: st.store, title, items, text: tx.value.trim(), images });
+          go("#/post/done");
+        } catch (er) { toast(er.message || "올리기에 실패했어요"); btn.disabled = false; btn.textContent = "올리기"; }
+      };
+    });
   }
 
   function photoRules() {
@@ -1515,7 +1658,7 @@
       if (!k) return `<p class="pl">추구미로 찾기</p><div class="chips">${STYLE_TAGS.map(x => `<a class="chip" href="#/search?tag=${encodeURIComponent(x)}">${esc(x)}</a>`).join("")}</div>
         <p class="pl">이런 걸 찾아보세요</p><div class="chips">${["신촌", "이대", "노래방", "떡볶이", "카페", "산책"].map(x => `<button class="chip" data-q="${x}">${x}</button>`).join("")}</div>`;
       const cs = courses.filter(c => norm([c.title, c.area, c.gu, ...(c.stops || []).map(s => s.name)].join(" ")).includes(k));
-      const ps = feed.filter(p => norm([p.question, p.text, p.courseTitle, ...optKeys(p).map(k => p[k].label)].join(" ")).includes(k));
+      const ps = feed.filter(p => norm([p.question, p.text, p.courseTitle, p.title, ...(p.items || []).map(i => i.name), ...optKeys(p).map(k => p[k].label)].join(" ")).includes(k));
       const tagHit = STYLE_TAGS.find(x => norm(x) === k);
       return `${tagHit ? `<a class="cta-card" href="#/search?tag=${encodeURIComponent(tagHit)}"><span class="cta-ic">${ic("user", 20)}</span><div><b>추구미 '${esc(tagHit)}' 게시물 보기</b></div>${ic("chev", 18, "chev")}</a>` : ""}
         <div class="sec-head mt"><h2>코스 <small class="muted">${cs.length}</small></h2></div>
@@ -1858,7 +2001,7 @@
     const posts = await S.store.listPosts();
     const pending = posts.filter(x => x.status === "pending"), done = posts.filter(x => x.status !== "pending");
     const card = x => { const st = STATUS[x.status] || STATUS.pending; const imgs = x.type === "vote" ? (hasImgs(x) ? optKeys(x).map(k => x[k].img) : []) : x.images || []; return `<div class="card sub-card">
-      <div class="rv-top"><b>${x.type === "vote" ? "[투표] " + esc(x.question) : "[코스 후기] " + esc(x.courseTitle)}</b><span class="status ${st[1]}">${st[0]}</span></div>
+      <div class="rv-top"><b>${x.type === "vote" ? "[투표] " + esc(x.question) : x.type === "combo" ? `[꿀조합] ${esc(x.title)} · ${(x.items || []).map(i => esc(i.name)).join(" + ")}` : "[코스 후기] " + esc(x.courseTitle)}</b><span class="status ${st[1]}">${st[0]}</span></div>
       <p class="muted tiny">${esc(x.nickname)} · ${fmtDate(x.createdAt)}${x.type === "vote" ? ` · ${optKeys(x).map(k => esc(x[k].label)).join(" / ")}` : ""}</p>
       <div class="review-imgs">${imgs.map(r => imgTag(r, "")).join("")}</div>
       ${x.text ? `<p class="tiny">${esc(x.text)}</p>` : ""}

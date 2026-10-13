@@ -129,6 +129,12 @@ window.TS_SEED = {
     { id: "q-03", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "outfit", question: "흰 티셔츠엔 어떤 바지?", text: "이번 주 등굣길 코디 고민 중", a: { label: "와이드 데님", img: window.TS_ART["poll-01"][0] }, b: { label: "카고 팬츠", img: window.TS_ART["poll-01"][1] } },
     { id: "q-05", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "makeup", question: "데일리 립 컬러는?", text: "가을에 쓸 립 하나만 고른다면", a: { label: "코랄", img: window.TS_ART["poll-04"][0] }, b: { label: "로즈", img: window.TS_ART["poll-04"][1] } },
     { id: "q-04", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "etc", question: "시험 기간 공부 장소는?", text: "카페는 시끄러울까요?", a: { label: "집", img: "" }, b: { label: "스터디카페", img: "" }, c: { label: "도서관", img: "" }, d: { label: "카페", img: "" } },
-    { id: "q-06", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "food", question: "편의점 디저트 하나만 고르면?", text: "", a: { label: "푸딩", img: "" }, b: { label: "생크림빵", img: "" }, c: { label: "아이스크림", img: "" } }
+    { id: "q-06", type: "vote", uid: "teenspot", nickname: "TeenSpot 에디터", cat: "food", question: "편의점 디저트 하나만 고르면?", text: "", a: { label: "푸딩", img: "" }, b: { label: "생크림빵", img: "" }, c: { label: "아이스크림", img: "" } },
+    { id: "q-c1", type: "combo", uid: "teenspot", nickname: "TeenSpot 에디터", store: "cu", title: "마크정식", text: "떡볶이 위에 치즈 올리고 전자레인지 1분", items: [{ name: "매운 떡볶이 컵", price: 2500 }, { name: "스파게티 컵라면", price: 1500 }, { name: "소시지", price: 1500 }, { name: "스트링치즈", price: 1200 }], images: [] },
+    { id: "q-c2", type: "combo", uid: "teenspot", nickname: "TeenSpot 에디터", store: "gs25", title: "치즈 라볶이", text: "라면 사리는 반만 넣어야 안 퍼져요", items: [{ name: "떡볶이 컵", price: 2500 }, { name: "라면 사리", price: 900 }, { name: "슬라이스 치즈", price: 800 }], images: [] },
+    { id: "q-c3", type: "combo", uid: "teenspot", nickname: "TeenSpot 에디터", store: "seven", title: "아이스크림 라떼", text: "컵에 아이스크림 먼저 넣고 커피 붓기", items: [{ name: "바닐라 아이스크림", price: 1500 }, { name: "컵커피", price: 2000 }], images: [] },
+    { id: "q-c4", type: "combo", uid: "teenspot", nickname: "TeenSpot 에디터", store: "cu", title: "삼김 국밥", text: "컵라면 국물에 삼각김밥 말아서", items: [{ name: "컵라면", price: 1300 }, { name: "참치마요 삼각김밥", price: 1300 }, { name: "구운 계란", price: 1000 }], images: [] },
+    { id: "q-c5", type: "combo", uid: "teenspot", nickname: "TeenSpot 에디터", store: "emart24", title: "요거트 볼", text: "바나나는 잘라서 맨 위에", items: [{ name: "플레인 요거트", price: 1500 }, { name: "그래놀라", price: 2000 }, { name: "바나나", price: 1000 }], images: [] },
+    { id: "q-c6", type: "combo", uid: "teenspot", nickname: "TeenSpot 에디터", store: "cafe", title: "크로플 + 아이스크림", text: "따뜻할 때 바로 올려야 맛있어요", items: [{ name: "크로플", price: 4000 }, { name: "아이스크림 추가", price: 1500 }], images: [] }
   ]
 };
