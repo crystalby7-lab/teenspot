@@ -99,5 +99,7 @@
     return `<span class="art ${cls || ""}" style="--art-bg:${plain ? "transparent" : d.bg}"><svg viewBox="0 0 64 64" aria-hidden="true">${d.g}</svg></span>`;
   }
   const iconFor = (text, cls, plain) => { const k = match(text); return k ? icon(k, cls, plain) : ""; };
-  window.TSArt = { icon, iconFor, match, CAT, has: n => !!D[n], names: Object.keys(D) };
+  const svg = name => (D[name] ? `<svg viewBox="0 0 64 64" aria-hidden="true">${D[name].g}</svg>` : "");
+  const bg = name => (D[name] ? D[name].bg : "#EEF2F7");
+  window.TSArt = { icon, iconFor, match, CAT, svg, bg, has: n => !!D[n], names: Object.keys(D) };
 })();

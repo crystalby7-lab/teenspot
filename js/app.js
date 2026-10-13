@@ -503,6 +503,9 @@
   }
   // 투표 영역: 사진 선택지는 그리드, 글자 선택지는 목록. r이 있고 (내가 골랐거나 마감) 이면 결과 표시
   // 선택지 배지: 맞는 그림이 있으면 그림, 없으면 A·B·C·D
+  // 그림 모드: 사진이 없고 모든 선택지에 맞는 그림이 있으면 큰 그림 카드로
+  const artMode = p => { if (hasImgs(p) || optKeys(p).length < 2) return false; const ns = optKeys(p).map(k => window.TSArt.match(p[k].label)); return ns.every(Boolean) && new Set(ns).size === ns.length; };
+  const artTile = (label, cls) => { const n = window.TSArt.match(label); return `<span class="art-tile ${cls || ""}" style="--art-bg:${window.TSArt.bg(n)}">${window.TSArt.svg(n)}</span>`; };
   const keyBadge = (p, k) => artFor(p[k].label, "a-key") || `<span class="pv-key num">${KEY_LABEL[k]}</span>`;
   function optsHtml(p, mine, r) {
     const ks = optKeys(p), show = !!(r && (mine || isEnded(p)));
@@ -512,13 +515,17 @@
       if (!show) return `<div class="pv-grid n${ks.length}">${ks.map(k => `<button class="pv-opt" data-pick="${k}" aria-label="${esc(p[k].label)} 선택">${imgTag(p[k].img, p[k].label)}<span class="pv-label">${esc(p[k].label)}</span></button>`).join("")}</div>`;
       return `<div class="pv-grid n${ks.length} done">${ks.map(k => `<div class="pv-opt ${cls(k)}">${imgTag(p[k].img, p[k].label)}<div class="pv-res"><b class="num">${res.v[k]}%</b><span>${esc(p[k].label)}${mine === k ? " · 내 선택" : ""}</span></div></div>`).join("")}</div>`;
     }
+    if (artMode(p)) {
+      if (!show) return `<div class="pv-grid artm n${ks.length}">${ks.map(k => `<button class="pv-opt artm" data-pick="${k}" aria-label="${esc(p[k].label)} 선택">${artTile(p[k].label)}<span class="pv-cap">${esc(p[k].label)}</span></button>`).join("")}</div>`;
+      return `<div class="pv-grid artm n${ks.length} done">${ks.map(k => `<div class="pv-opt artm ${cls(k)}">${artTile(p[k].label)}<span class="pv-cap"><b class="num">${res.v[k]}%</b>${esc(p[k].label)}</span><i class="pv-bar" style="--v:${res.v[k]}%"></i>${mine === k ? `<em class="pv-mine">내 선택</em>` : ""}</div>`).join("")}</div>`;
+    }
     if (!show) return `<div class="pv-list">${ks.map(k => `<button class="pv-row" data-pick="${k}">${keyBadge(p, k)}<b>${esc(p[k].label)}</b></button>`).join("")}</div>`;
     return `<div class="pv-list done">${ks.map(k => `<div class="pv-row ${cls(k)}"><i class="pv-fill" style="width:${res.v[k]}%"></i>${keyBadge(p, k)}<b>${esc(p[k].label)}</b>${mine === k ? `<small>내 선택</small>` : ""}<em class="num">${res.v[k]}%</em></div>`).join("")}</div>`;
   }
   function voteAreaHtml(p, mine, r) {
     const show = !!(r && (mine || isEnded(p)));
     const left = p.endsAt ? ` · <b class="num">${timeLeft(p)}</b>` : "";
-    if (!show) return optsHtml(p, mine, r) + `<p class="pv-hint">${optKeys(p).length > 2 ? "하나를 골라 투표해요" : "마음에 드는 쪽을 골라요"}${left}</p>`;
+    if (!show) return optsHtml(p, mine, r) + (p.endsAt ? `<p class="pv-hint"><b class="num">${timeLeft(p)}</b></p>` : "");
     const total = pcts(p, r).total;
     return optsHtml(p, mine, r) + `<p class="pv-hint">${total ? `또래 <b class="num">${total.toLocaleString("ko-KR")}명</b> 참여` : "아직 참여한 사람이 없어요"}${isEnded(p) ? " · 투표 마감" : left}</p>`;
   }
@@ -531,11 +538,13 @@
     return h >= 24 ? `${Math.floor(h / 24)}일 남음` : h >= 1 ? `${h}시간 남음` : `${Math.max(1, Math.floor(ms / 60e3))}분 남음`;
   }
   function pollCard(p, voted) {
-    return `<a class="card poll-card ${hasImgs(p) ? "" : "with-art"}" href="#/poll/${encodeURIComponent(p.id)}">${hasImgs(p) ? "" : art(pollArtName(p), "a-corner")}
-      <div class="pc-top"><span class="tag">${CATS[p.cat] || ""}</span>${isEnded(p) ? `<span class="tag done">마감</span>` : voted ? `<span class="tag done">투표 완료</span>` : `<span class="tag new">투표하기</span>`}${p.endsAt && !isEnded(p) ? `<span class="tag soft-time num">${timeLeft(p)}</span>` : ""}</div>
+    const visual = hasImgs(p) || artMode(p);
+    return `<a class="card poll-card ${visual ? "" : "with-art"}" href="#/poll/${encodeURIComponent(p.id)}">${visual ? "" : art(pollArtName(p), "a-corner")}
+      <div class="pc-top"><span class="pc-cat">${art(window.TSArt.CAT[p.cat] || "sparkle", "a-chip")}${CATS[p.cat] || "기타"}</span>${isEnded(p) ? `<span class="pc-state">마감</span>` : voted ? `<span class="pc-state">투표 완료</span>` : p.endsAt ? `<span class="pc-state hot num">${timeLeft(p)}</span>` : ""}</div>
       <h3>${esc(p.question)}</h3>
       ${hasImgs(p) ? `<div class="pc-thumbs n${optKeys(p).length}">${optKeys(p).map(k => `<div>${imgTag(p[k].img, p[k].label)}<span>${esc(p[k].label)}</span></div>`).join("")}</div>`
-        : `<div class="pc-opts">${optKeys(p).map(k => `<span>${artFor(p[k].label, "a-pill") || `<em class="num">${KEY_LABEL[k]}</em>`}${esc(p[k].label)}</span>`).join("")}</div>`}
+        : artMode(p) ? `<div class="pc-thumbs artm n${optKeys(p).length}">${optKeys(p).map(k => `<div>${artTile(p[k].label)}<span>${esc(p[k].label)}</span></div>`).join("")}</div>`
+        : `<div class="pc-opts">${optKeys(p).map(k => `<span><em class="num">${KEY_LABEL[k]}</em>${esc(p[k].label)}</span>`).join("")}</div>`}
     </a>`;
   }
   const popular = arr => [...arr].sort((a, b) => b.recCount - a.recCount || b.reviewCount - a.reviewCount || (b.createdAt || 0) - (a.createdAt || 0));
@@ -605,8 +614,36 @@
      ========================================================= */
   const BUDGETS = [[5000, "5천원"], [10000, "1만원"], [15000, "1만5천원"], [20000, "2만원"], [30000, "3만원"], [0, "상관없음"]];
   const HOURS = [[2, "2시간"], [3, "3시간"], [4, "4시간"], [6, "6시간"], [0, "상관없음"]];
-  function screenSpot(t) {
+  // 동네 지도 (서대문구): 위치는 실제 지도를 단순화한 배치
+  const AREA_POS = { "홍제": [56, 16], "연희동": [27, 42], "안산": [58, 44], "독립문": [84, 50], "신촌": [30, 76], "이대": [55, 78] };
+  function spotMap(courses) {
+    const areas = {};
+    courses.filter(c => c.gu === LAUNCH_GU).forEach(c => { (areas[c.area] = areas[c.area] || []).push(c); });
+    const pins = Object.entries(areas).filter(([a]) => AREA_POS[a]).map(([a, cs]) => {
+      const [x, y] = AREA_POS[a], n = courseArt(cs[0]) || "tree";
+      return `<a class="sm-pin" style="left:${x}%;top:${y}%" href="#/spot/list?area=${encodeURIComponent(a)}" aria-label="${esc(a)} 코스 ${cs.length}개">
+        <span class="sm-ic" style="--art-bg:${window.TSArt.bg(n)}">${window.TSArt.svg(n)}<em class="num">${cs.length}</em></span><b>${esc(a)}</b></a>`;
+    }).join("");
+    return `<section class="spot-map-wrap">
+      <div class="sec-head"><h2>${esc(LAUNCH_GU)} 스팟 지도</h2><span class="muted tiny">동네를 누르면 코스가 나와요</span></div>
+      <div class="spot-map">
+        <svg class="sm-bg" viewBox="0 0 340 230" preserveAspectRatio="none" aria-hidden="true">
+          <rect width="340" height="230" fill="#EAF0F7"/>
+          <path d="M150 62c30-18 76-14 96 8 18 20 12 50-10 64-26 16-74 14-94-6-18-18-14-50 8-66z" fill="#D6EBDD"/>
+          <path d="M168 78c14-8 36-6 46 6M160 100c18-8 46-6 62 4" stroke="#C3E0CC" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <path d="M-10 64c40-6 70 6 110-4s70-30 110-34 90-6 140-18" stroke="#CFE0F2" stroke-width="12" fill="none" stroke-linecap="round"/>
+          <path d="M-10 168c60-6 120 0 180-4s110-8 180-14M120-10c-6 60 4 120-4 250M260-10c4 70-8 140 10 250M-10 118c50 4 90-6 130-2" stroke="#fff" stroke-width="9" fill="none" stroke-linecap="round"/>
+          <path d="M20 20h300v190H20z" fill="none" stroke="#C9D3E1" stroke-width="2" stroke-dasharray="2 6" rx="20"/>
+        </svg>
+        ${pins}
+        <div class="sm-mascot">${mascot("happy", 46, { shadow: false })}</div>
+      </div>
+    </section>`;
+  }
+  async function screenSpot(t) {
     const f = S.spotFilter || (S.spotFilter = { people: 3, budget: 15000, hours: 4, gu: S.profile.gu });
+    paint(t, page(header("코스") + loadingHtml(), "spot"));
+    const courses = await S.store.listCourses();
     paint(t, page(`
       ${header("코스", { right: `<a class="icon-btn" href="#/search" aria-label="검색">${ic("search", 22)}</a>` })}
       <h1 class="step-title">오늘 친구랑 어디 갈까?</h1>
@@ -619,6 +656,7 @@
       </div>
       <button class="btn block lg" id="find">코스 찾기</button>
       <div class="row gap center mt"><a class="link" href="#/spot/list">전체 코스 보기</a><span class="muted">·</span><a class="link" href="#/submit">코스 제보하기</a></div>
+      ${spotMap(courses)}
     `, "spot"), () => {
       $app.querySelectorAll("[data-p]").forEach(b => (b.onclick = () => { f.people = Math.max(1, Math.min(10, f.people + Number(b.dataset.p))); $app.querySelector("#pv").textContent = f.people + "명"; }));
       const pick = (id, key) => $app.querySelectorAll(`#${id} .chip`).forEach(b => (b.onclick = () => { f[key] = Number(b.dataset.v); $app.querySelectorAll(`#${id} .chip`).forEach(x => x.classList.toggle("on", x === b)); }));
@@ -629,13 +667,14 @@
   }
   async function screenCourseList(t, q) {
     const filtered = !!q.gu;
-    const title = filtered ? "추천 코스" : "전체 코스";
+    const title = q.area ? `${q.area} 코스` : filtered ? "추천 코스" : "전체 코스";
     paint(t, page(header(title, { back: true }) + loadingHtml(), "spot"));
     let list = await S.store.listCourses();
     if (filtered) {
       const people = Number(q.people) || 0, budget = Number(q.budget) || 0, hours = Number(q.hours) || 0;
       list = list.filter(c => c.gu === q.gu && (!people || (people >= c.peopleMin && people <= c.peopleMax)) && (!budget || c.total <= budget) && (!hours || c.hours <= hours));
     }
+    if (q.area) list = list.filter(c => c.area === q.area);
     const sort = q.sort || "rec";
     list = sort === "cheap" ? [...list].sort((a, b) => a.total - b.total) : popular(list);
     const qs = new URLSearchParams(q);
@@ -830,7 +869,7 @@
     paint(t, page(`
       ${header("투표", { right: `<a class="link" href="#/style/history">내 선택</a>` })}
       <p class="muted">고민되는 건 또래한테 물어봐요. 결과는 투표하면 보여요</p>
-      <div class="cat-row">${[["all", "전체"], ...Object.entries(CATS)].map(([k, l]) => `<a href="#/style?cat=${k}" class="chip ${cat === k ? "on" : ""}">${k === "all" ? "" : art(window.TSArt.CAT[k], "a-chip", true)}${l}</a>`).join("")}</div>
+      <div class="cat-row">${[["all", "전체"], ...Object.entries(CATS)].map(([k, l]) => `<a href="#/style?cat=${k}" class="chip ${cat === k ? "on" : ""}">${k === "all" ? "" : art(window.TSArt.CAT[k], "a-chip")}${l}</a>`).join("")}</div>
       ${list.length ? list.map(p => pollCard(p, !!votes[p.id])).join("") : emptyHtml("vote", "아직 투표가 없어요", "곧 새 투표가 올라와요")}
     `, "style"));
   }
@@ -924,7 +963,7 @@
     return { votes, results, pubs, saved: new Set(saves.filter(s => s.type === "post").map(s => s.id)) };
   }
   function comboBody(p) {
-    const arts = (p.images || []).length ? "" : `<div class="cb-hero">${(p.items || []).map(i => window.TSArt.match(i.name)).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).slice(0, 4).map(n => art(n, "a-hero")).join(`<i>+</i>`) || art("store", "a-hero")}</div>`;
+    const arts = (p.images || []).length ? "" : `<div class="cb-hero-wrap">${comboVisual(p, "lg")}</div>`;
     return `<div class="combo-body">${arts}
       <p class="post-q">${esc(p.title)}</p>
       <ul class="cb-list">${(p.items || []).map((i, n) => `<li>${artFor(i.name, "a-key") || `<span class="cb-n num">${n + 1}</span>`}<span class="grow">${esc(i.name)}</span><b class="num">${i.price ? won(i.price) : "-"}</b></li>`).join("")}</ul>
@@ -1106,20 +1145,25 @@
     if (r.yum) out.push(`맛있어요 <em class="num">${r.yum}</em>`);
     return out.length ? `<span class="cb-rx">${out.join("")}</span>` : "";
   }
-  function comboCard(c, rank) {
+  // 꿀조합 비주얼: 사진이 있으면 사진, 없으면 재료 그림
+  function comboVisual(c, cls) {
     const img = (c.images || [])[0];
-    return `<a class="card combo-card" href="#/post/${encodeURIComponent(c.id)}">
-      <div class="grow">
-        <div class="cb-top"><span class="tag">${esc(STORES[c.store] || "기타")}</span>${rank ? `<span class="tag new num">TOP ${rank}</span>` : ""}</div>
+    if (img) return `<div class="cb-visual photo ${cls || ""}">${imgTag(img, c.title)}</div>`;
+    const names = comboArtNames(c);
+    return `<div class="cb-visual ${cls || ""}" style="--cbv:${window.TSArt.bg(names[0])}">${names.map(n => `<span class="cbv-item" style="--art-bg:${window.TSArt.bg(n)}">${window.TSArt.svg(n)}</span>`).join(`<i>+</i>`)}</div>`;
+  }
+  function comboCard(c, rank) {
+    return `<a class="combo-card" href="#/post/${encodeURIComponent(c.id)}">
+      <div class="cb-media">${comboVisual(c)}<span class="cb-store">${esc(STORES[c.store] || "기타")}</span>${rank ? `<span class="cb-top-badge num">${rank}위</span>` : ""}</div>
+      <div class="cb-info">
         <h3>${esc(c.title)}</h3>
-        <p class="cb-items">${(c.items || []).map(i => esc(i.name)).join(`<i>+</i>`)}</p>
+        <p class="cb-items">${(c.items || []).map(i => esc(i.name)).join(" · ")}</p>
         <div class="cb-meta"><b class="num">${won(comboTotal(c))}</b>${comboRx(c)}</div>
       </div>
-      ${img ? `<div class="cb-thumb">${imgTag(img, c.title)}</div>` : plate(c, "card")}
     </a>`;
   }
   function comboRow(c, i) {
-    return `<a class="hist combo-row" href="#/post/${encodeURIComponent(c.id)}"><span class="cb-rank num">${i + 1}</span>${plate(c, "row")}
+    return `<a class="hist combo-row" href="#/post/${encodeURIComponent(c.id)}"><span class="cb-rank num">${i + 1}</span>${art(comboArtNames(c)[0], "a-row")}
       <div class="grow"><b>${esc(c.title)}</b><p class="muted tiny">${(c.items || []).map(x => esc(x.name)).join(" + ")}</p></div>
       <b class="num cb-price">${won(comboTotal(c))}</b></a>`;
   }
@@ -1231,7 +1275,7 @@
     const hint = { a: "선택지 1", b: "선택지 2", c: "선택지 3", d: "선택지 4" };
     paint(t, page(`
       ${header("투표 올리기", { back: true })}
-      <div class="field"><span>카테고리</span><div class="chips" id="cat">${Object.entries(CATS).map(([k, l]) => `<button class="chip ${k === st.cat ? "on" : ""}" data-v="${k}">${art(window.TSArt.CAT[k], "a-chip", true)}${l}</button>`).join("")}</div></div>
+      <div class="field"><span>카테고리</span><div class="chips" id="cat">${Object.entries(CATS).map(([k, l]) => `<button class="chip ${k === st.cat ? "on" : ""}" data-v="${k}">${art(window.TSArt.CAT[k], "a-chip")}${l}</button>`).join("")}</div></div>
       <label class="field"><span>질문</span><input id="qq" maxlength="30" placeholder="예: 이 니트엔 어떤 바지?"></label>
       <div class="field"><span>선택지 <small class="muted">2~4개 · 사진은 3:4로 잘려요</small></span>
         <div class="nv-opts">${OPT_KEYS.map((k, i) => `<div class="nv-opt" data-k="${k}" ${i >= 2 ? "hidden" : ""}>
