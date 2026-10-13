@@ -643,7 +643,7 @@ button.pv-row:active { transform: scale(.985); background: var(--navy-100); }
 
 /* 투표 카드 미리보기 */
 .pc-opts { display: flex; flex-wrap: wrap; gap: 6px; }
-.pc-opts span { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 6px; border-radius: 11px; background: var(--navy-50); font-size: 13.5px; font-weight: 700; color: var(--sub); max-width: 100%; }
+.pc-opts > span { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px 0 6px; border-radius: 11px; background: var(--navy-50); font-size: 13.5px; font-weight: 700; color: var(--sub); max-width: 100%; }
 .pc-opts em { width: 22px; height: 22px; border-radius: 7px; background: var(--card); display: grid; place-items: center; font-style: normal; font-size: 11.5px; color: var(--navy-500); flex: none; }
 .pc-thumbs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .pc-thumbs.n3 { grid-template-columns: repeat(3, 1fr); }
@@ -732,3 +732,46 @@ button.pv-row:active { transform: scale(.985); background: var(--navy-100); }
 .txt-tile.combo small, .txt-tile.combo span { color: #A9472E; }
 .strip-item .txt-tile.combo span { color: #A9472E; }
 .seg a { white-space: nowrap; }
+
+/* ---------- 일러스트 ---------- */
+.art { display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--art-bg); border-radius: 30%; line-height: 0; }
+.art svg { width: 78%; height: 78%; display: block; flex: none; }
+.art.a-key { width: 34px; height: 34px; border-radius: 11px; }
+.poll-body .art.a-key { width: 40px; height: 40px; border-radius: 13px; }
+.pv-row .art.a-key { margin-left: -2px; }
+.art.a-pill { width: 24px; height: 24px; border-radius: 8px; }
+.pc-opts > span:has(.art) { padding-left: 5px; }
+.art.a-chip { width: 22px; height: 22px; margin: 0 4px 0 -4px; }
+.art.a-chip svg { width: 100%; height: 100%; }
+.chip { display: inline-flex; align-items: center; }
+.poll-card.with-art { position: relative; padding-right: 16px; }
+.poll-card.with-art h3 { padding-right: 64px; }
+.art.a-corner { position: absolute; top: 14px; right: 14px; width: 56px; height: 56px; border-radius: 18px; }
+.art.a-tile { position: absolute; right: 8px; bottom: 8px; width: 44px; height: 44px; border-radius: 14px; background: rgba(255, 255, 255, .1); }
+.txt-tile { position: relative; }
+.txt-tile.combo .plate.tile { position: absolute; right: 8px; bottom: 26px; }
+.plate { display: inline-flex; flex: none; align-items: center; }
+.plate .art.a-pl { width: 40px; height: 40px; border-radius: 13px; box-shadow: 0 0 0 2.5px var(--card); }
+.plate .art.a-pl + .art.a-pl { margin-left: -12px; }
+.plate.card { align-self: center; }
+.plate.card .art.a-pl { width: 48px; height: 48px; border-radius: 16px; }
+.plate.card .art.a-pl + .art.a-pl { margin-left: -18px; }
+.plate.row .art.a-pl { width: 34px; height: 34px; border-radius: 11px; }
+.plate.row .art.a-pl + .art.a-pl { margin-left: -14px; }
+.plate.tile .art.a-pl { width: 30px; height: 30px; border-radius: 10px; box-shadow: 0 0 0 2px var(--accent-soft); }
+.plate.tile .art.a-pl + .art.a-pl { margin-left: -10px; }
+.cb-hero { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 16px 14px; padding: 22px 10px; border-radius: 18px; background: linear-gradient(160deg, #FFF6EE, #FDECE6); }
+.cb-hero i { font-style: normal; font-family: var(--font-brand); font-weight: 700; font-size: 18px; color: #E8A08A; }
+.art.a-hero { width: 66px; height: 66px; border-radius: 22px; background: #fff; box-shadow: 0 6px 16px rgba(240, 120, 90, .14); }
+.cb-list .art.a-key { width: 30px; height: 30px; border-radius: 10px; background: var(--card); }
+.cc-thumb.has-art { background: none; }
+.art.a-cc { width: 64px; height: 64px; border-radius: 18px; margin-top: -10px; }
+.cc-thumb.has-art small { bottom: -1px; background: rgba(255, 255, 255, .92); border-radius: 7px; left: 8px; right: 8px; padding: 1px 0; }
+.tl-name { display: flex; align-items: center; gap: 8px; }
+.art.a-tl { width: 28px; height: 28px; border-radius: 9px; }
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.quick a { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 4px 12px; background: var(--card); border-radius: var(--r-lg); transition: transform .12s var(--ease); }
+.quick a:active { transform: scale(.96); }
+.quick b { font-size: 13px; font-weight: 700; color: var(--ink); }
+.art.a-q { width: 52px; height: 52px; border-radius: 17px; }
+.empty-mascot { margin-bottom: 8px; }
