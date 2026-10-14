@@ -1,0 +1,72 @@
+/* 네이비 테마: html[data-theme="navy"] */
+html[data-theme="navy"] {
+  --navy: #EEF2F8; --navy-press: #D5DCE8;
+  --navy-700: #CBD3E0; --navy-500: #9DA9BE; --navy-300: #6F7D97; --navy-200: #3F4F6C; --navy-100: #2F3E5A; --navy-50: #27354F;
+  --ink: #F4F6FA; --sub: #C3CBDA; --muted: #8592AA; --line: rgba(255, 255, 255, .07);
+  --bg: #141E33; --card: #1D2A43; --field: #27354F; --deep: #141E33;
+  --accent-soft: rgba(255, 212, 59, .14); --accent-ink: #FFD43B;
+  --ok-soft: rgba(35, 132, 91, .22); --danger-soft: rgba(209, 74, 69, .18); --warn-bg: rgba(255, 196, 0, .14); --warn-fg: #FFD43B;
+  color-scheme: dark;
+}
+html[data-theme="navy"] body, html[data-theme="navy"] #app { background: var(--bg); }
+html[data-theme="navy"] .topbar { background: rgba(20, 30, 51, .86); }
+html[data-theme="navy"] .tabbar { background: rgba(29, 42, 67, .94); box-shadow: 0 10px 30px -8px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .06); }
+html[data-theme="navy"] .tabbar a { color: #6F7D97; }
+html[data-theme="navy"] .tabbar a.on { color: var(--ink); }
+html[data-theme="navy"] .tabbar a.on .tab-ic { background: rgba(255, 212, 59, .16); }
+html[data-theme="navy"] .tabbar a.on .ic { color: var(--accent); }
+html[data-theme="navy"] .action-bar { background: rgba(29, 42, 67, .94); }
+html[data-theme="navy"] .bottom-cta { background: linear-gradient(to bottom, rgba(20, 30, 51, 0), var(--bg) 30%); }
+/* 주 버튼은 노랑 */
+html[data-theme="navy"] .btn { background: var(--accent); color: var(--deep); }
+html[data-theme="navy"] .btn:active { background: #F2C523; }
+html[data-theme="navy"] .btn:disabled { background: var(--navy-100); color: var(--muted); }
+html[data-theme="navy"] .btn.ghost { background: var(--navy-50); color: var(--ink); }
+html[data-theme="navy"] .btn.light { background: #fff; color: var(--deep); }
+html[data-theme="navy"] .btn.google { background: #fff; color: #172033; }
+/* 밝은 바탕 + 어두운 글자로 뒤집히는 부품 */
+html[data-theme="navy"] :is(.tag.new, .chip.on, .chips.big .chip.on, .cat-row .chip.on, .stop-n, .tl-num, .dots i.on, .steps b, .pchip.on, .badge-official, .tag.lg, .opt .lock, .pv-row.mine .pv-key, .cb-rank, .pv-mine, .cb-top-badge, .sm-ic em, .sg.open, .ob-chip.vs, .avatar) { color: var(--deep); }
+html[data-theme="navy"] :is(.chip.on, .cat-row .chip.on, .chips.big .chip.on) { background: #fff; }
+html[data-theme="navy"] .cat-row .chip { background: var(--card); }
+html[data-theme="navy"] .chip { background: var(--field); }
+/* 원래 네이비 덩어리였던 카드는 한 톤 밝게 */
+html[data-theme="navy"] :is(.hero, .challenge, .pts-hero) { background: linear-gradient(160deg, #26365A, #1D2A43); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); }
+html[data-theme="navy"] .txt-tile { background: #26365A; }
+html[data-theme="navy"] .ch-btn { background: #fff; color: var(--deep); }
+html[data-theme="navy"] .ch-btn.claim { background: var(--accent); }
+html[data-theme="navy"] .hero .btn.light { color: var(--deep); }
+html[data-theme="navy"] #splash, html[data-theme="navy"] .login { background: #141E33; }
+html[data-theme="navy"] .wm-login { --wm-face: #141E33; }
+html[data-theme="navy"] .wordmark { --wm-face: #141E33; }
+html[data-theme="navy"] #toast { background: #fff; color: var(--deep); }
+html[data-theme="navy"] .modal-bg { background: rgba(0, 0, 0, .55); }
+/* 반투명 흰 라벨 */
+html[data-theme="navy"] :is(.cb-store, .sm-pin b, .cc-thumb.has-art small) { background: rgba(20, 30, 51, .88); color: var(--ink); }
+html[data-theme="navy"] .sg { background: rgba(29, 42, 67, .95); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); color: var(--muted); }
+html[data-theme="navy"] .sg.open { background: #fff; }
+html[data-theme="navy"] .sg.mine { background: var(--accent); color: var(--deep); }
+html[data-theme="navy"] .seoul { background: var(--card); }
+html[data-theme="navy"] .seoul-bg path:first-child { fill: #26344E; }
+html[data-theme="navy"] .spot-map, html[data-theme="navy"] .sm-bg rect { background: #22314D; fill: #22314D; }
+html[data-theme="navy"] .sm-ic em { box-shadow: 0 0 0 2px #22314D; }
+/* 그림 카드는 밝은 바탕 그대로 두되 살짝 눌러서 덜 튀게 */
+html[data-theme="navy"] .art-tile, html[data-theme="navy"] .cbv-item { filter: saturate(.95); }
+html[data-theme="navy"] .cb-visual { background: linear-gradient(150deg, #26365A 0%, #1D2A43 90%); }
+html[data-theme="navy"] .theme-card, html[data-theme="navy"] .theme-hero { background: var(--card); }
+html[data-theme="navy"] .theme-card .art.a-theme, html[data-theme="navy"] .theme-hero .art.a-theme { background: var(--art-bg); }
+html[data-theme="navy"] .vf-card, html[data-theme="navy"] .vote-done { background: var(--card); }
+html[data-theme="navy"] .post-q, html[data-theme="navy"] h1, html[data-theme="navy"] h2, html[data-theme="navy"] h3 { color: var(--ink); }
+html[data-theme="navy"] .topbar .title-lg::after { opacity: .9; height: 9px; }
+html[data-theme="navy"] .pv-row { background: var(--field); }
+html[data-theme="navy"] .poll-body .pv-row { background: var(--card); }
+html[data-theme="navy"] .pv-fill { background: rgba(255, 255, 255, .08); }
+html[data-theme="navy"] .pv-row.win .pv-fill { background: rgba(255, 212, 59, .22); }
+html[data-theme="navy"] .pv-key { background: var(--card); }
+html[data-theme="navy"] .sk-week i { background: var(--field); color: var(--deep); }
+html[data-theme="navy"] .sk-week span.on i { background: var(--accent); }
+html[data-theme="navy"] .sk-week span.today i { box-shadow: inset 0 0 0 2px #fff; }
+html[data-theme="navy"] .sk-btn, html[data-theme="navy"] .pt-go, html[data-theme="navy"] .vr-state { color: var(--deep); }
+html[data-theme="navy"] .praise-btn.on { color: var(--deep); }
+html[data-theme="navy"] .pc-thumbs.artm span:not(.art-tile) { color: var(--sub); }
+html[data-theme="navy"] .flame:not(.on) path { fill: #3F4F6C; }
+html[data-theme="navy"] .dot-n { color: var(--deep); }
