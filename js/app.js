@@ -96,7 +96,7 @@
     </div>`;
   }
   function emptyHtml(icon, title, desc, action) {
-    return `<div class="empty"><div class="empty-mascot">${mascot(icon === "checkCircle" ? "happy" : icon === "alert" || icon === "block" ? "wow" : "sleepy", 64, { shadow: false })}</div><h3>${esc(title)}</h3>${desc ? `<p class="muted">${esc(desc)}</p>` : ""}${action || ""}</div>`;
+    return `<div class="empty"><div class="empty-mascot">${mascot(icon === "checkCircle" ? "happy" : icon === "alert" || icon === "block" ? "wow" : "sleepy", 64, { shadow: false })}</div><h3>${esc(title)}</h3>${action || ""}</div>`;
   }
   function header(title, opts) {
     opts = opts || {};
@@ -111,7 +111,7 @@
     </header>`;
   }
   function tabbar(active) {
-    const tabs = [["home", "home", "홈"], ["feed", "grid", "피드"], ["spot", "pin", "코스"], ["combo", "combo", "꿀조합"], ["style", "vote", "투표"], ["me", "user", "마이"]];
+    const tabs = [["home", "home", "홈"], ["style", "vote", "투표"], ["spot", "pin", "코스"], ["combo", "combo", "꿀조합"], ["me", "user", "마이"]];
     return `<nav class="tabbar">${tabs.map(([k, i, l]) => `<a href="#/${k}" class="${active === k ? "on" : ""}" ${active === k ? 'aria-current="page"' : ""}><span class="tab-ic">${ic(i, 23)}</span><span>${l}</span></a>`).join("")}</nav>`;
   }
   const demoBadge = () => (S.store && S.store.mode === "demo" ? `<span class="badge-demo">체험 모드</span>` : "");
@@ -575,7 +575,7 @@
     const d = await themeData(th);
     paint(t, page(`
       ${header(th.title, { back: true })}
-      <section class="theme-hero" style="--tone:${th.tone}">${art(th.art, "a-theme")}<div><h1>${esc(th.title)}</h1><p>${esc(th.desc)}</p></div></section>
+      <section class="theme-hero" style="--tone:${th.tone}">${art(th.art, "a-theme")}<div><h1>${esc(th.title)}</h1></div></section>
       <section><div class="sec-head"><h2>코스</h2><span class="muted tiny num">${d.courses.length}개</span></div>
         ${d.courses.length ? courseList(d.courses) : emptyHtml("map", "아직 맞는 코스가 없어요", "", `<a class="btn sm" href="#/submit">코스 제보하기</a>`)}</section>
       <section><div class="sec-head"><h2>꿀조합</h2><span class="muted tiny num">${d.combos.length}개</span></div>
@@ -605,7 +605,7 @@
     paint(t, page(`
       ${header("", { brand: true, right: `<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>${bellHtml()}` })}
       <section class="hero hero2">
-        <div class="hero-text"><p>${esc(S.profile.nickname)}님, 오늘은</p><h2>뭐가 고민돼?</h2></div>
+        <div class="hero-text"><p>${esc(S.profile.nickname)}</p><h2>뭐가 고민돼?</h2></div>
         <div class="hero-mascot">${mascot("happy", 54, { inverse: true, shadow: false })}</div>
         <div class="quick">
           <a href="#/style?cat=outfit">${art("shirt", "a-q")}<b>뭐 입지</b></a>
@@ -618,7 +618,7 @@
       ${challengeCard(chal)}
       <section>
         <div class="sec-head"><h2>이번 주 테마</h2></div>
-        <div class="themes">${themes.map(({ th, n }) => `<a class="theme-card" href="#/theme/${th.id}" style="--tone:${th.tone}">${art(th.art, "a-theme")}<b>${esc(th.title)}</b><span>${esc(th.desc)}</span><small class="num">코스 ${n.c} · 꿀조합 ${n.b}</small></a>`).join("")}</div>
+        <div class="themes">${themes.map(({ th, n }) => `<a class="theme-card" href="#/theme/${th.id}" style="--tone:${th.tone}">${art(th.art, "a-theme")}<b>${esc(th.title)}</b><small class="num">코스 ${n.c}  꿀조합 ${n.b}</small></a>`).join("")}</div>
       </section>
     `, "home"), () => {
       const cb = $app.querySelector("#checkin");
@@ -669,7 +669,6 @@
         ${tiles}
         <span class="seoul-river">한강</span>
       </div>
-      <p class="tiny muted center">구를 누르면 그 지역으로 찾아요</p>
     </section>`;
   }
   // 동네 지도 (서대문구): 위치는 실제 지도를 단순화한 배치
@@ -683,7 +682,7 @@
         <span class="sm-ic" style="--art-bg:${window.TSArt.bg(n)}">${window.TSArt.svg(n)}<em class="num">${cs.length}</em></span><b>${esc(a)}</b></a>`;
     }).join("");
     return `<section class="spot-map-wrap">
-      <div class="sec-head"><h2>${esc(LAUNCH_GU)} 스팟 지도</h2><span class="muted tiny">동네를 누르면 코스가 나와요</span></div>
+      <div class="sec-head"><h2>${esc(LAUNCH_GU)} 스팟 지도</h2></div>
       <div class="spot-map">
         <svg class="sm-bg" viewBox="0 0 340 230" preserveAspectRatio="none" aria-hidden="true">
           <rect width="340" height="230" fill="#EAF0F7"/>
@@ -722,7 +721,7 @@
         f.gu = g; $app.querySelector("#gu").value = g;
         $app.querySelectorAll(".sg").forEach(x => x.classList.toggle("sel", x === b));
         if (n) go(`#/spot/list?gu=${encodeURIComponent(g)}&people=0&budget=0&hours=0`);
-        else toast(`${g}는 준비 중이에요. 코스를 제보하면 먼저 열려요`);
+        else toast(`${g} 준비 중`);
       }));
       $app.querySelectorAll("[data-p]").forEach(b => (b.onclick = () => { f.people = Math.max(1, Math.min(10, f.people + Number(b.dataset.p))); $app.querySelector("#pv").textContent = f.people + "명"; }));
       const pick = (id, key) => $app.querySelectorAll(`#${id} .chip`).forEach(b => (b.onclick = () => { f[key] = Number(b.dataset.v); $app.querySelectorAll(`#${id} .chip`).forEach(x => x.classList.toggle("on", x === b)); }));
@@ -926,48 +925,18 @@
   /* =========================================================
      5. STYLE
      ========================================================= */
-  // 투표 탭: 한 번에 한 문제씩 크게 + 아래에 전체 목록
   async function screenStyle(t, q) {
     const cat = CATS[q.cat] ? q.cat : "all";
-    paint(t, page(header("투표") + loadingHtml(), "style"));
+    const right = `<a class="link" href="#/style/history">내 선택</a><button class="icon-btn" id="up" aria-label="투표 올리기">${ic("plus", 24)}</button>`;
+    paint(t, page(header("투표", { right }) + loadingHtml(), "style"));
     const [polls, votes] = await Promise.all([S.store.listPolls(), S.store.myVotes()]);
     const list = polls.filter(notFood).filter(p => cat === "all" || p.cat === cat);
-    const skip = S.voteSkip || (S.voteSkip = new Set());
-    let pending = list.filter(p => !votes[p.id] && !isEnded(p));
-    if (pending.length && pending.every(p => skip.has(p.id))) skip.clear();
-    const focus = pending.find(p => !skip.has(p.id));
-    const rows = [...list].sort((a, b) => (votes[a.id] ? 1 : 0) - (votes[b.id] ? 1 : 0));
-    const state = p => isEnded(p) ? `<span class="vr-state done">마감</span>` : votes[p.id] ? `<span class="vr-state done">완료</span>` : `<span class="vr-state">${p.endsAt ? `<b class="num">${timeLeft(p)}</b>` : "투표"}</span>`;
+    list.sort((a, b) => (votes[a.id] || isEnded(a) ? 1 : 0) - (votes[b.id] || isEnded(b) ? 1 : 0));
     paint(t, page(`
-      ${header("투표", { right: `<a class="link" href="#/style/history">내 선택</a>` })}
+      ${header("투표", { right })}
       <div class="cat-row">${[["all", "전체"], ...Object.entries(CATS)].map(([k, l]) => `<a href="#/style?cat=${k}" class="chip ${cat === k ? "on" : ""}">${k === "all" ? "" : art(window.TSArt.CAT[k], "a-chip")}${l}</a>`).join("")}</div>
-      ${focus ? `<section class="vote-focus">
-        <div class="vf-top"><span class="vf-count"><b class="num">${pending.length}</b>개 남았어요</span>${pending.length > 1 ? `<button class="link" id="skip">다음에 할래요</button>` : ""}</div>
-        <div class="vf-card">
-          <span class="pc-cat">${art(window.TSArt.CAT[focus.cat] || "sparkle", "a-chip")}${CATS[focus.cat] || "기타"}</span>
-          <h2 class="vf-q">${esc(focus.question)}</h2>
-          <div class="poll-body pv" id="vf">${voteAreaHtml(focus, null, null)}</div>
-        </div>
-      </section>` : `<section class="vote-done">${mascot("happy", 64, { shadow: false })}<b>${list.length ? "남은 투표를 다 했어요" : "아직 투표가 없어요"}</b><p class="muted tiny">새 투표가 올라오면 여기에 나와요</p></section>`}
-      ${rows.length ? `<section><div class="sec-head"><h2>${cat === "all" ? "모든 투표" : CATS[cat] + " 투표"}</h2><span class="muted tiny num">${rows.length}개</span></div>
-        <div class="group vote-rows">${rows.map(p => `<a class="hist vrow" href="#/poll/${encodeURIComponent(p.id)}">${hasImgs(p) ? `<span class="vr-thumb">${imgTag(p.a.img, p.a.label)}</span>` : art(pollArtName(p), "a-row")}
-          <div class="grow"><b>${esc(p.question)}</b><p class="muted tiny">${optKeys(p).map(k => esc(p[k].label)).join(" vs ")}</p></div>${state(p)}</a>`).join("")}</div></section>` : ""}
-    `, "style"), () => {
-      if (!focus) return;
-      const box = $app.querySelector("#vf"), sk = $app.querySelector("#skip");
-      if (sk) sk.onclick = () => { skip.add(focus.id); render(); };
-      box.querySelectorAll("[data-pick]").forEach(b => (b.onclick = async () => {
-        box.querySelectorAll("[data-pick]").forEach(x => (x.disabled = true)); b.classList.add("picked");
-        try {
-          await S.store.vote(focus.id, b.dataset.pick);
-          const got = await award("vote", focus.id); if (got) toast(`투표 완료 +${got}P`);
-          const r = await S.store.pollResult(focus.id);
-          box.innerHTML = voteAreaHtml(focus, b.dataset.pick, r) + `<button class="btn block lg vf-next" id="next">${pending.length > 1 ? "다음 투표" : "완료"}</button>`;
-          hydrateImages(box);
-          box.querySelector("#next").onclick = () => render();
-        } catch (e) { toast(e.message || "투표에 실패했어요"); box.querySelectorAll("[data-pick]").forEach(x => (x.disabled = false)); }
-      }));
-    });
+      ${list.length ? list.map(p => pollCard(p, !!votes[p.id])).join("") : emptyHtml("vote", "아직 투표가 없어요")}
+    `, "style"), () => { $app.querySelector("#up").onclick = () => uploadSheet(); });
   }
   async function screenPoll(t, id) {
     paint(t, page(header("투표", { back: true }) + loadingHtml(), "style"));
@@ -999,7 +968,7 @@
       <div class="poll-body pv">${voteAreaHtml(p, mine, r)}</div>
       ${r ? `<p class="verdict">${verdict}</p>
         ${next ? `<a class="btn block lg" href="#/poll/${encodeURIComponent(next.id)}">다음 투표</a>` : `<a class="btn block lg ghost" href="#/style">투표 목록으로</a>`}`
-        : `<p class="tiny muted center">한 번 고르면 바꿀 수 없어요</p>`}
+        : ""}
     `, "style"), () => {
       bindCommon();
       $app.querySelectorAll("[data-pick]").forEach(b => (b.onclick = async () => {
@@ -1063,7 +1032,7 @@
     return `<div class="combo-body">${arts}
       <p class="post-q">${esc(p.title)}</p>
       <ul class="cb-list">${(p.items || []).map((i, n) => `<li>${artFor(i.name, "a-key") || `<span class="cb-n num">${n + 1}</span>`}<span class="grow">${esc(i.name)}</span><b class="num">${i.price ? won(i.price) : "-"}</b></li>`).join("")}</ul>
-      <div class="cb-total"><span>합계 <small>${md(p.createdAt)} 기준 · 매장마다 달라요</small></span><b class="num">${won(comboTotal(p))}</b></div>
+      <div class="cb-total"><span>합계 <small>${md(p.createdAt)} 기준</small></span><b class="num">${won(comboTotal(p))}</b></div>
     </div>`;
   }
   const praiseSum = p => praiseOf(p).filter(([k]) => (p.praise || {})[k]).map(([k, l]) => `${l} <b class="num">${p.praise[k]}</b>`).join("<i></i>");
@@ -1101,7 +1070,7 @@
         try { await S.store.react(p.id, { like: on }); } catch (e) { toast("반영에 실패했어요"); }
       };
       el.querySelector("[data-praise-open]").onclick = () => {
-        const sh = openModal(`<h3>칭찬 보내기</h3><p class="muted tiny">하나만 고를 수 있어요. 다시 누르면 취소돼요</p>
+        const sh = openModal(`<h3>칭찬하기</h3>
           <div class="praise-pick">${praiseOf(p).map(([k, l]) => `<button class="choice ${p.myPraise === k ? "on" : ""}" data-pr="${k}">${l}<span class="num muted">${(p.praise || {})[k] || ""}</span></button>`).join("")}</div>
           <button class="btn ghost block" data-act="close-modal">닫기</button>`);
         sh.querySelectorAll("[data-pr]").forEach(b => (b.onclick = async () => {
@@ -1165,7 +1134,6 @@
     const early = p.status !== "approved" && p.type === "vote";
     const earlyCombo = p.status !== "approved" && p.type === "combo";
     const el = openModal(`<h3>글 수정</h3>
-      <p class="muted tiny">${early ? "공개 전이라 질문과 선택지 이름도 고칠 수 있어요" : earlyCombo ? "공개 전이라 조합 이름도 고칠 수 있어요" : p.type === "vote" ? "공개된 투표는 설명만 고칠 수 있어요. 질문과 선택지는 투표 결과가 바뀌지 않게 고정돼요" : "사진은 그대로 두고 글만 고쳐요"}</p>
       ${early ? `<label class="field"><span>질문</span><input id="e-q" maxlength="30" value="${esc(p.question)}"></label>
         <div class="field"><span>선택지</span><div class="nv-opts">${optKeys(p).map(k => `<input id="e-${k}" maxlength="15" value="${esc(p[k].label)}">`).join("")}</div></div>` : ""}
       ${earlyCombo ? `<label class="field"><span>조합 이름</span><input id="e-title" maxlength="20" value="${esc(p.title)}"></label>` : ""}
@@ -1191,11 +1159,11 @@
     };
   }
   function uploadSheet(courseId) {
-    const el = openModal(`<h3>무엇을 올릴까요?</h3><p class="muted">올린 게시물은 운영자 확인 후 피드에 공개돼요</p>
+    const el = openModal(`<h3>올리기</h3>
       <div class="list-choice">
-        <button class="choice tall" data-u="vote"><span class="cta-ic">${ic("vote", 20)}</span><div><b>투표 올리기</b><p class="muted tiny">선택지 2~4개, 사진은 넣어도 되고 빼도 돼요</p></div></button>
-        <button class="choice tall" data-u="combo"><span class="cta-ic">${ic("combo", 20)}</span><div><b>꿀조합</b><p class="muted tiny">편의점·디저트 조합, 사진은 선택</p></div></button>
-        <button class="choice tall" data-u="review"><span class="cta-ic">${ic("camera", 20)}</span><div><b>코스 사진 후기</b><p class="muted tiny">다녀온 코스 사진 최대 4장</p></div></button>
+        <button class="choice tall" data-u="vote"><span class="cta-ic">${ic("vote", 20)}</span><div><b>투표</b><p class="muted tiny">선택지 2~4개</p></div></button>
+        <button class="choice tall" data-u="combo"><span class="cta-ic">${ic("combo", 20)}</span><div><b>꿀조합</b><p class="muted tiny">편의점, 배달, 디저트</p></div></button>
+        <button class="choice tall" data-u="review"><span class="cta-ic">${ic("camera", 20)}</span><div><b>코스 후기</b><p class="muted tiny">사진 최대 4장</p></div></button>
       </div>
       <button class="btn ghost block" data-act="close-modal">닫기</button>`);
     el.querySelector('[data-u="vote"]').onclick = () => { closeModal(); go("#/post/new/vote"); };
@@ -1288,7 +1256,7 @@
       <div class="sort-row">${[["hot", "인기순"], ["new", "최신순"]].map(([k, l]) => `<a href="${q2("sort", k)}" class="${sort === k ? "on" : ""}">${l}</a>`).join("")}</div>
       ${list.length ? list.map((c, i) => comboCard(c, sort === "hot" && comboScore(c) > 0 && i < 3 ? i + 1 : 0)).join("")
         : emptyHtml("combo", st === "all" ? "아직 꿀조합이 없어요" : `${STORES[st]} 꿀조합이 아직 없어요`, "첫 꿀조합을 올려보세요")}
-      <a class="cta-card" href="#/post/new/combo"><span class="cta-ic">${ic("plus", 20)}</span><div class="grow"><b>나만 아는 꿀조합이 있어요</b><p class="muted tiny">승인되면 모두에게 보여요 · +${EARN.post[0]}P</p></div>${ic("chev", 18, "chev")}</a>
+      <a class="cta-card" href="#/post/new/combo"><span class="cta-ic">${ic("plus", 20)}</span><div class="grow"><b>꿀조합 올리기</b></div><span class="pts-badge num">+${EARN.post[0]}P</span>${ic("chev", 18, "chev")}</a>
     `, "combo"), () => { $app.querySelector("#up").onclick = () => go("#/post/new/combo"); });
   }
   function screenNewCombo(t) {
@@ -1489,7 +1457,7 @@
     });
   }
   function screenPostDone(t) {
-    paint(t, `<div class="center-screen">${mascot("happy", 92)}<h2>게시물을 올렸어요</h2><p class="muted">운영자 확인 후 피드에 공개돼요<br>마이에서 진행 상황을 볼 수 있어요</p>
+    paint(t, `<div class="center-screen">${mascot("happy", 92)}<h2>검토 중</h2><p class="muted">승인되면 공개돼요요</p>
       <div class="row gap center"><a class="btn ghost" href="#/me">내 게시물 보기</a><a class="btn" href="#/feed">피드로</a></div></div>`);
   }
 
@@ -1615,11 +1583,11 @@
       <div class="sk-main">
         ${FLAME(st.done)}
         <div class="grow"><b class="sk-n"><span class="num">${shown}</span>일 연속</b>
-          <p class="muted tiny">${st.done ? "오늘 출석 완료. 내일도 이어가요" : st.n ? `오늘 출석하면 ${st.n + 1}일째가 돼요` : "오늘부터 연속 기록을 시작해요"}</p></div>
-        ${st.done ? `<span class="sk-ok">${ic("check", 16)}완료</span>` : `<button class="btn sm sk-btn" id="checkin">출석하기 <b class="num">+${EARN.checkin[0]}P</b></button>`}
+</div>
+        ${st.done ? `<span class="sk-ok">${ic("check", 16)}출석 완료</span>` : `<button class="btn sm sk-btn" id="checkin">출석 <b class="num">+${EARN.checkin[0]}P</b></button>`}
       </div>
       <div class="sk-week">${week.map(d => `<span class="${d.on ? "on" : ""} ${d.today ? "today" : ""} ${d.future ? "future" : ""}"><i>${d.on ? ic("check", 13) : ""}</i>${d.label}</span>`).join("")}</div>
-      ${next ? `<p class="sk-next"><b class="num">${next[0]}</b>일 연속까지 <b class="num">${next[0] - st.n}</b>일 남았어요 · 보너스 <b class="num">+${EARN[next[1]][0]}P</b></p>` : ""}
+      ${next ? `<p class="sk-next"><span><b class="num">${next[0]}</b>일 연속 보너스</span><b class="num">+${EARN[next[1]][0]}P</b></p>` : ""}
     </section>`;
   }
   /* ---------- 이번 주 챌린지 ---------- */
@@ -1652,11 +1620,11 @@
   function challengeCard(c) {
     const ch = c.ch, full = c.n >= ch.goal;
     return `<section class="challenge">
-      <div class="ch-head"><span class="ch-label">이번 주 챌린지</span><span class="ch-left num">${c.left}일 남음</span></div>
-      <div class="ch-body">${art(ch.art, "a-ch")}<div class="grow"><h3>${esc(ch.title)}</h3><p>${esc(ch.desc)}</p></div></div>
+      <div class="ch-head"><span class="ch-label">이번 주 챌린지</span><span class="ch-left num">D-${c.left}</span></div>
+      <div class="ch-body">${art(ch.art, "a-ch")}<div class="grow"><h3>${esc(ch.title)}</h3></div></div>
       <div class="ch-bar"><i style="width:${Math.round((c.n / ch.goal) * 100)}%"></i></div>
-      <div class="ch-meta"><span class="num">${c.n}/${ch.goal}</span><span>보상 <b class="num">+${ch.points}P</b> · ${esc(ch.itemLabel)}</span></div>
-      ${c.claimed ? `<div class="ch-done">${ic("check", 16)}보상을 받았어요. 다음 주 챌린지도 기대해요</div>`
+      <div class="ch-meta"><span class="num">${c.n}/${ch.goal}</span><span><b class="num">+${ch.points}P</b> ${esc(ch.itemLabel)}</span></div>
+      ${c.claimed ? `<div class="ch-done">${ic("check", 16)}완료</div>`
         : full ? `<button class="btn block ch-btn claim" id="claim">보상 받기</button>`
         : `<a class="btn block ch-btn" href="${ch.href}">${esc(ch.cta)}</a>`}
     </section>`;
@@ -1879,7 +1847,7 @@
       ${list.length ? `<div class="group noti-list">${list.map(x => `<a class="noti ${x.at > seen ? "new" : ""}" href="${x.href}">
           ${x.av ? avatarHtml(x.av, 40) : `<span class="noti-ic ${x.warn ? "warn" : ""}">${ic(x.icon, 19)}</span>`}
           <div class="grow"><p>${esc(x.text)}</p>${x.sub ? `<small>${esc(x.sub)}</small>` : ""}<time>${ago(x.at)}</time></div></a>`).join("")}</div>`
-        : `<div class="center-screen">${mascot("sleepy", 80)}<h2>아직 알림이 없어요</h2><p class="muted">게시물을 올리거나 투표하면 소식이 여기 모여요</p></div>`}
+        : `<div class="center-screen">${mascot("sleepy", 80)}<h2>알림 없음</h2></div>`}
     `));
     if (list.length) S.store.saveProfile({ notiSeen: Date.now() }).then(() => { S.profile.notiSeen = Date.now(); }).catch(() => {});
   }
@@ -1982,11 +1950,11 @@
         ${subs.map(s => { const st = STATUS[s.status] || STATUS.pending; return `<${s.courseId ? `a href="#/course/${encodeURIComponent(s.courseId)}"` : "div"} class="card hist"><div class="grow"><b>${esc(s.title)}</b><p class="muted tiny">${s.status === "rejected" ? esc(rejectNote(s)) : esc(s.area) + " · " + fmtDate(s.createdAt)}</p></div><span class="status ${st[1]}">${st[0]}</span></${s.courseId ? "a" : "div"}>`; }).join("")}
       </section>` : ""}
       <section>
-        <div class="sec-head"><h2>${posts.length || reviews.length || subs.length ? "더 해보기" : "첫 활동 시작하기"}</h2></div>
+        <div class="sec-head"><h2>활동</h2></div>
         <div class="group act-list">
-          <button class="hist" id="up"><span class="act-ic">${ic("vote", 18)}</span><div class="grow"><b>투표 올리기</b><p class="muted tiny">고민을 또래 투표로 정해요</p></div><span class="pts-badge num">+${EARN.post[0]}P</span></button>
-          <a class="hist" href="#/spot/list"><span class="act-ic">${ic("edit", 18)}</span><div class="grow"><b>코스 후기 쓰기</b><p class="muted tiny">다녀온 코스를 알려줘요</p></div><span class="pts-badge num">+${EARN.review[0]}P</span></a>
-          <a class="hist" href="#/submit"><span class="act-ic">${ic("send", 18)}</span><div class="grow"><b>나만 아는 코스 제보</b><p class="muted tiny">승인되면 모두에게 보여요</p></div><span class="pts-badge num">+${EARN.sub[0]}P</span></a>
+          <button class="hist" id="up"><span class="act-ic">${ic("vote", 18)}</span><div class="grow"><b>투표 올리기</b></div><span class="pts-badge num">+${EARN.post[0]}P</span></button>
+          <a class="hist" href="#/spot/list"><span class="act-ic">${ic("edit", 18)}</span><div class="grow"><b>코스 후기 쓰기</b></div><span class="pts-badge num">+${EARN.review[0]}P</span></a>
+          <a class="hist" href="#/submit"><span class="act-ic">${ic("send", 18)}</span><div class="grow"><b>코스 제보</b></div><span class="pts-badge num">+${EARN.sub[0]}P</span></a>
         </div>
       </section>
     `, "me"), () => { $app.querySelector("#up").onclick = () => uploadSheet(); });

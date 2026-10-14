@@ -1015,3 +1015,5 @@ button.pv-opt.artm:active .art-tile svg { transform: scale(.92); }
 .theme-hero .art.a-theme { width: 64px; height: 64px; border-radius: 20px; background: #fff; box-shadow: 0 8px 18px rgba(30, 42, 62, .08); }
 .theme-hero h1 { font-size: 22px; letter-spacing: -0.04em; }
 .theme-hero p { margin: 2px 0 0; color: var(--sub); font-size: 14px; }
+.sk-next { display: flex; justify-content: space-between; align-items: baseline; }
+.sk-main .grow { display: flex; align-items: center; }
