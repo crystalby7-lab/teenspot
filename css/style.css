@@ -1017,3 +1017,34 @@ button.pv-opt.artm:active .art-tile svg { transform: scale(.92); }
 .theme-hero p { margin: 2px 0 0; color: var(--sub); font-size: 14px; }
 .sk-next { display: flex; justify-content: space-between; align-items: baseline; }
 .sk-main .grow { display: flex; align-items: center; }
+
+/* ---------- 새 스팟이 (이미지 캐릭터) ---------- */
+img.mascot { display: block; object-fit: contain; flex: none; -webkit-user-drag: none; user-select: none; }
+.splash-pin { width: 132px; height: 132px; animation: bob 1.6s var(--ease) infinite alternate; }
+.hero2 .hero-mascot { right: 10px; top: 4px; transform: none; }
+.hero2 .quick a { gap: 4px; padding: 8px 4px 12px; }
+.hero2 .quick img.mascot { width: 60px; height: 60px; }
+.sk-char { position: relative; flex: none; width: 60px; height: 60px; }
+.sk-char .flame { position: absolute; right: -6px; bottom: -2px; width: 22px; height: 26px; }
+.ch-body img.mascot { margin: -6px 0 -6px -6px; }
+.theme-card img.mascot { margin: -6px 0 2px -6px; }
+.theme-hero img.mascot { margin: -10px 0; }
+.char-cta { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 12px; padding: 8px 14px 8px 8px; border: 0; border-radius: var(--r-lg); background: var(--card); text-align: left; color: var(--ink); font: inherit; transition: transform .12s var(--ease); }
+.char-cta:active { transform: scale(.985); }
+.char-cta b { display: block; font-size: 15.5px; font-weight: 700; }
+.char-cta span { font-size: 12.5px; color: var(--muted); }
+.cta-card.char { padding: 6px 16px 6px 8px; gap: 10px; }
+.spot-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.spot-head .step-title { margin: 8px 0 4px; }
+.spot-head img.mascot { margin: -4px -6px -10px 0; }
+.verdict { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.verdict p { margin: 0; text-align: center; font-weight: 700; }
+.pts-hero { position: relative; }
+.pts-char { position: absolute; right: 10px; top: 6px; }
+.sm-mascot { right: 4px; bottom: 0; transform: none; }
+.empty-mascot { margin-bottom: 4px; }
+.onboard-art img.mascot { position: relative; z-index: 0; }
+.login-hero img.mascot { margin-bottom: 4px; animation: bob 1.6s var(--ease) infinite alternate; }
+.center-screen img.mascot { margin: 0 auto 6px; }
+.sec-char { align-items: flex-end; margin-bottom: 6px; }
+.sec-char img.mascot { margin: -20px 4px -8px 0; }

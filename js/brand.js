@@ -27,16 +27,17 @@
     }
     return brows(0) + eye(24, 55) + eye(67, 53) + nose;
   }
-  // mood: default | happy | wink | sleepy | wow, inverse: 어두운 배경용 (흰 몸, 네이비 선)
+  // 스팟이 (보영이 만든 캐릭터 시트에서 자른 그림). mood는 그림 이름 또는 예전 이름
+  const LEGACY = { default: "basic", plain: "basic", happy: "happy", wink: "wink", sleepy: "sleepy", wow: "wow" };
+  const NAMES = ["wave", "map", "backpack", "phone", "front", "side", "back", "basic", "happy", "wink", "excited", "wow", "curious", "love", "shy", "focus", "think", "tired", "sleepy", "findspot", "vote", "money", "friends", "shirt", "go", "spot"];
   function mascot(mood, size, opts) {
     opts = opts || {};
-    const shadow = opts.shadow === false ? "" : `<ellipse cx="64" cy="142" rx="38" ry="3.6" fill="${opts.inverse ? "rgba(255,255,255,.16)" : "rgba(30,42,62,.12)"}"/>`;
-    const line = opts.inverse ? NAVY : NAVY;
-    return `<svg class="mascot ${opts.cls || ""}" width="${size}" height="${Math.round(size * 148 / 122)}" viewBox="0 0 122 148" aria-hidden="true">${shadow}${limbs(W, line)}<path d="${BODY}" fill="${W}" stroke="${line}" stroke-width="5" stroke-linejoin="round"/>${face(mood, NAVY)}</svg>`;
+    const name = NAMES.includes(mood) ? mood : LEGACY[mood] || "basic";
+    return `<img class="mascot ch-${name} ${opts.cls || ""}" src="images/spot/${name}.png" width="${size}" height="${size}" alt="" aria-hidden="true" loading="lazy" decoding="async">`;
   }
   // 워드마크: teensp + 스팟이(o 자리) + t
   function wordmark(cls) {
-    return `<span class="wordmark ${cls || ""}" aria-label="TeenSpot">teensp<svg class="wm-pin" viewBox="0 0 122 148" aria-hidden="true"><path d="${BODY}" fill="currentColor"/><ellipse cx="24" cy="55" rx="6" ry="9" fill="var(--wm-face, #fff)"/><ellipse cx="67" cy="53" rx="6" ry="9" fill="var(--wm-face, #fff)"/></svg>t</span>`;
+    return `<span class="wordmark ${cls || ""}" aria-label="TeenSpot">teensp<svg class="wm-pin" viewBox="0 0 100 100" aria-hidden="true"><path d="${PIN}" fill="var(--accent, #FFD43B)"/><circle cx="50" cy="42" r="13" fill="var(--wm-face, #141E33)"/></svg>t</span>`;
   }
   window.TSBrand = { mascot, wordmark, PIN, BODY, NAVY };
 })();

@@ -89,14 +89,15 @@
   function errorHtml(e) {
     const offline = !navigator.onLine;
     return `<div class="center-screen">
-      ${mascot(offline ? "sleepy" : "wow", 84)}
+      ${mascot(offline ? "tired" : "wow", 110)}
       <h2>${offline ? "인터넷 연결이 끊겼어요" : "문제가 생겼어요"}</h2>
       <p class="muted">${offline ? "연결을 확인하고 다시 시도해주세요" : esc(e && e.message ? e.message : "잠시 후 다시 시도해주세요")}</p>
       <button class="btn" data-act="retry">다시 시도</button>
     </div>`;
   }
+  const EMPTY_MOOD = { checkCircle: "happy", alert: "wow", block: "wow", lock: "shy", search: "curious", map: "findspot", vote: "vote", combo: "money", image: "think", edit: "think", bookmark: "love", user: "curious", send: "spot", flag: "focus" };
   function emptyHtml(icon, title, desc, action) {
-    return `<div class="empty"><div class="empty-mascot">${mascot(icon === "checkCircle" ? "happy" : icon === "alert" || icon === "block" ? "wow" : "sleepy", 64, { shadow: false })}</div><h3>${esc(title)}</h3>${action || ""}</div>`;
+    return `<div class="empty"><div class="empty-mascot">${mascot(EMPTY_MOOD[icon] || "curious", 88)}</div><h3>${esc(title)}</h3>${action || ""}</div>`;
   }
   function header(title, opts) {
     opts = opts || {};
@@ -214,9 +215,9 @@
      1. 첫 실행
      ========================================================= */
   const ONBOARD = [
-    { mood: "happy", chips: ["3명", "1만5천원", "4시간"], title: "친구랑 어디 가지?", desc: "인원, 예산, 시간만 고르면\n또래가 직접 다녀온 코스를 보여줘요" },
-    { mood: "wink", chips: ["마라탕", "떡볶이", "김밥"], title: "뭐 먹지? 뭐 입지?", desc: "고민되는 건\n또래 투표로 정해요" },
-    { mood: "default", chips: ["댓글 없음", "구 단위 공개", "1:1 메시지 없음"], title: "안심하고 쓰는 공간", desc: "선택과 칭찬만 주고받아요\n올린 사진은 운영자가 확인한 뒤 공개돼요" }
+    { mood: "findspot", chips: ["3명", "1만5천원", "4시간"], title: "친구랑 어디 가지?", desc: "인원, 예산, 시간만 고르면\n또래가 직접 다녀온 코스를 보여줘요" },
+    { mood: "shirt", chips: ["와이드 데님", "카고 팬츠", "슬랙스"], title: "뭐 입지? 뭐 하지?", desc: "고민되는 건\n또래 투표로 정해요" },
+    { mood: "friends", chips: ["댓글 없음", "구 단위 공개", "1:1 메시지 없음"], title: "안심하고 쓰는 공간", desc: "선택과 칭찬만 주고받아요\n올린 사진은 운영자가 확인한 뒤 공개돼요" }
   ];
   function screenOnboarding(t, i) {
     i = Math.max(0, Math.min(ONBOARD.length - 1, i));
@@ -226,7 +227,7 @@
       <div class="onboard-body">
         <div class="onboard-art" data-slide="${i}">
           ${s.chips.map((c, k) => `<span class="ob-chip c${k} ${c === "vs" ? "vs" : ""}">${esc(c)}</span>`).join("")}
-          ${mascot(s.mood, 132)}
+          ${mascot(s.mood, 168)}
         </div>
         <h1>${esc(s.title)}</h1>
         <p>${esc(s.desc).replace(/\n/g, "<br>")}</p>
@@ -276,7 +277,7 @@
   function screenLogin(t) {
     paint(t, `<div class="login">
       <div class="login-hero">
-        ${mascot("happy", 104, { inverse: true })}
+        ${mascot("wave", 150)}
         <h1>${window.TSBrand.wordmark("wm-login")}</h1>
         <p>어른 리뷰 말고,<br>또래가 직접 해본 것</p>
         ${demoBadge()}
@@ -333,7 +334,7 @@
   function screenBlocked(t, q) {
     const young = q.k !== "adult";
     paint(t, `<div class="center-screen">
-      ${mascot(young ? "wink" : "plain", 84)}
+      ${mascot(young ? "shy" : "curious", 110)}
       <h2>${young ? "만 14세부터 가입할 수 있어요" : "TeenSpot은 10대 전용이에요"}</h2>
       <p class="muted">${young ? "조금만 기다렸다가 다시 만나요!" : "만 14~19세 청소년만 가입할 수 있어요"}</p>
       <button class="btn" data-act="out">처음으로</button>
@@ -555,13 +556,13 @@
   const courseText = c => [c.title, ...(c.stops || []).map(s => s.name)].join(" ");
   const comboText = c => [c.title, ...(c.items || []).map(i => i.name)].join(" ");
   const THEMES = [
-    { id: "exam", title: "시험 끝난 날", desc: "소리 지르고 맛있는 거 먹기", art: "mic", tone: "#EEF0FA",
+    { id: "exam", title: "시험 끝난 날", desc: "소리 지르고 맛있는 거 먹기", art: "mic", char: "excited", tone: "#EEF0FA",
       course: c => hasWord(courseText(c), ["노래", "보드게임", "방탈출"]), combo: c => c.store === "delivery" },
-    { id: "budget", title: "만 원으로 하루", desc: "용돈 아끼면서 알차게", art: "bag", tone: "#FDECE6",
+    { id: "budget", title: "만 원으로 하루", desc: "용돈 아끼면서 알차게", art: "bag", char: "money", tone: "#FDECE6",
       course: c => c.total <= 10000, combo: c => comboTotal(c) <= 5000 },
-    { id: "rain", title: "비 오는 날 실내", desc: "밖에 안 나가도 되는 코스와 따끈한 조합", art: "coffee", tone: "#F3EEE8",
+    { id: "rain", title: "비 오는 날 실내", desc: "밖에 안 나가도 되는 코스와 따끈한 조합", art: "coffee", char: "sleepy", tone: "#F3EEE8",
       course: c => hasWord(courseText(c), ["노래", "보드게임", "카페", "빵", "베이커리", "빈티지", "소품"]), combo: c => hasWord(comboText(c), ["라면", "마라", "국물", "떡볶이"]) },
-    { id: "bday", title: "친구 생일", desc: "사진 남기고 다 같이 나눠 먹기", art: "balloon", tone: "#FFF1F3",
+    { id: "bday", title: "친구 생일", desc: "사진 남기고 다 같이 나눠 먹기", art: "balloon", char: "friends", tone: "#FFF1F3",
       course: c => hasWord(courseText(c), ["포토", "사진", "노래"]), combo: c => c.store === "delivery" || hasWord(comboText(c), ["케이크", "아이스크림"]) }
   ];
   async function themeData(th) {
@@ -575,7 +576,7 @@
     const d = await themeData(th);
     paint(t, page(`
       ${header(th.title, { back: true })}
-      <section class="theme-hero" style="--tone:${th.tone}">${art(th.art, "a-theme")}<div><h1>${esc(th.title)}</h1></div></section>
+      <section class="theme-hero" style="--tone:${th.tone}">${mascot(th.char, 96)}<div><h1>${esc(th.title)}</h1></div></section>
       <section><div class="sec-head"><h2>코스</h2><span class="muted tiny num">${d.courses.length}개</span></div>
         ${d.courses.length ? courseList(d.courses) : emptyHtml("map", "아직 맞는 코스가 없어요", "", `<a class="btn sm" href="#/submit">코스 제보하기</a>`)}</section>
       <section><div class="sec-head"><h2>꿀조합</h2><span class="muted tiny num">${d.combos.length}개</span></div>
@@ -606,19 +607,19 @@
       ${header("", { brand: true, right: `<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>${bellHtml()}` })}
       <section class="hero hero2">
         <div class="hero-text"><p>${esc(S.profile.nickname)}</p><h2>뭐가 고민돼?</h2></div>
-        <div class="hero-mascot">${mascot("happy", 54, { inverse: true, shadow: false })}</div>
+        <div class="hero-mascot">${mascot("think", 92)}</div>
         <div class="quick">
-          <a href="#/style?cat=outfit">${art("shirt", "a-q")}<b>뭐 입지</b></a>
-          <a href="#/style?cat=play">${art("dice", "a-q")}<b>뭐 하지</b></a>
-          <a href="#/spot">${art("camera", "a-q")}<b>어디 가지</b></a>
-          <a href="#/combo">${art("store", "a-q")}<b>꿀조합</b></a>
+          <a href="#/style?cat=outfit">${mascot("shirt", 60)}<b>뭐 입지</b></a>
+          <a href="#/style?cat=play">${mascot("curious", 60)}<b>뭐 하지</b></a>
+          <a href="#/spot">${mascot("findspot", 60)}<b>어디 가지</b></a>
+          <a href="#/combo">${mascot("money", 60)}<b>꿀조합</b></a>
         </div>
       </section>
       ${streakCard()}
       ${challengeCard(chal)}
       <section>
         <div class="sec-head"><h2>이번 주 테마</h2></div>
-        <div class="themes">${themes.map(({ th, n }) => `<a class="theme-card" href="#/theme/${th.id}" style="--tone:${th.tone}">${art(th.art, "a-theme")}<b>${esc(th.title)}</b><small class="num">코스 ${n.c}  꿀조합 ${n.b}</small></a>`).join("")}</div>
+        <div class="themes">${themes.map(({ th, n }) => `<a class="theme-card" href="#/theme/${th.id}" style="--tone:${th.tone}">${mascot(th.char, 76)}<b>${esc(th.title)}</b><small class="num">코스 ${n.c}  꿀조합 ${n.b}</small></a>`).join("")}</div>
       </section>
     `, "home"), () => {
       const cb = $app.querySelector("#checkin");
@@ -693,7 +694,7 @@
           <path d="M20 20h300v190H20z" fill="none" stroke="#C9D3E1" stroke-width="2" stroke-dasharray="2 6" rx="20"/>
         </svg>
         ${pins}
-        <div class="sm-mascot">${mascot("happy", 46, { shadow: false })}</div>
+        <div class="sm-mascot">${mascot("go", 70)}</div>
       </div>
     </section>`;
   }
@@ -703,7 +704,7 @@
     const courses = await S.store.listCourses();
     paint(t, page(`
       ${header("코스", { right: `<a class="icon-btn" href="#/search" aria-label="검색">${ic("search", 22)}</a>` })}
-      <h1 class="step-title">오늘 친구랑 어디 갈까?</h1>
+      <div class="spot-head"><h1 class="step-title">오늘 친구랑<br>어디 갈까?</h1>${mascot("map", 104)}</div>
       <div class="card form-card">
         <div class="field"><span>인원</span>
           <div class="stepper"><button data-p="-1" aria-label="줄이기">${ic("minus", 18)}</button><b id="pv">${f.people}명</b><button data-p="1" aria-label="늘리기">${ic("plus", 18)}</button></div></div>
@@ -918,7 +919,7 @@
     });
   }
   function screenSubmitDone(t) {
-    paint(t, `<div class="center-screen">${mascot("happy", 92)}<h2>제보가 접수됐어요</h2><p class="muted">운영자 확인 후 공개되면 마이 > 내 제보에서 확인할 수 있어요</p>
+    paint(t, `<div class="center-screen">${mascot("spot", 140)}<h2>제보가 접수됐어요</h2><p class="muted">운영자 확인 후 공개되면 마이 > 내 제보에서 확인할 수 있어요</p>
       <div class="row gap center"><a class="btn ghost" href="#/me">내 제보 보기</a><a class="btn" href="#/home">홈으로</a></div></div>`);
   }
 
@@ -935,8 +936,9 @@
     paint(t, page(`
       ${header("투표", { right })}
       <div class="cat-row">${[["all", "전체"], ...Object.entries(CATS)].map(([k, l]) => `<a href="#/style?cat=${k}" class="chip ${cat === k ? "on" : ""}">${k === "all" ? "" : art(window.TSArt.CAT[k], "a-chip")}${l}</a>`).join("")}</div>
+      <button class="char-cta" id="up2">${mascot("vote", 72)}<div class="grow"><b>내 고민 올리기</b><span>친구들한테 물어보기</span></div>${ic("chev", 18, "chev")}</button>
       ${list.length ? list.map(p => pollCard(p, !!votes[p.id])).join("") : emptyHtml("vote", "아직 투표가 없어요")}
-    `, "style"), () => { $app.querySelector("#up").onclick = () => uploadSheet(); });
+    `, "style"), () => { $app.querySelector("#up").onclick = () => uploadSheet(); $app.querySelector("#up2").onclick = () => go("#/post/new/vote"); });
   }
   async function screenPoll(t, id) {
     paint(t, page(header("투표", { back: true }) + loadingHtml(), "style"));
@@ -966,7 +968,7 @@
       ${header(CATS[p.cat] || "투표", { back: true, right })}
       <h1 class="poll-q">${esc(p.question)}</h1>
       <div class="poll-body pv">${voteAreaHtml(p, mine, r)}</div>
-      ${r ? `<p class="verdict">${verdict}</p>
+      ${r ? `<div class="verdict">${mascot(!win ? "curious" : !mine ? "wow" : win === mine ? "happy" : "wink", 64)}<p>${verdict}</p></div>
         ${next ? `<a class="btn block lg" href="#/poll/${encodeURIComponent(next.id)}">다음 투표</a>` : `<a class="btn block lg ghost" href="#/style">투표 목록으로</a>`}`
         : ""}
     `, "style"), () => {
@@ -1256,7 +1258,7 @@
       <div class="sort-row">${[["hot", "인기순"], ["new", "최신순"]].map(([k, l]) => `<a href="${q2("sort", k)}" class="${sort === k ? "on" : ""}">${l}</a>`).join("")}</div>
       ${list.length ? list.map((c, i) => comboCard(c, sort === "hot" && comboScore(c) > 0 && i < 3 ? i + 1 : 0)).join("")
         : emptyHtml("combo", st === "all" ? "아직 꿀조합이 없어요" : `${STORES[st]} 꿀조합이 아직 없어요`, "첫 꿀조합을 올려보세요")}
-      <a class="cta-card" href="#/post/new/combo"><span class="cta-ic">${ic("plus", 20)}</span><div class="grow"><b>꿀조합 올리기</b></div><span class="pts-badge num">+${EARN.post[0]}P</span>${ic("chev", 18, "chev")}</a>
+      <a class="cta-card char" href="#/post/new/combo">${mascot("money", 64)}<div class="grow"><b>꿀조합 올리기</b></div><span class="pts-badge num">+${EARN.post[0]}P</span>${ic("chev", 18, "chev")}</a>
     `, "combo"), () => { $app.querySelector("#up").onclick = () => go("#/post/new/combo"); });
   }
   function screenNewCombo(t) {
@@ -1457,7 +1459,7 @@
     });
   }
   function screenPostDone(t) {
-    paint(t, `<div class="center-screen">${mascot("happy", 92)}<h2>검토 중</h2><p class="muted">승인되면 공개돼요요</p>
+    paint(t, `<div class="center-screen">${mascot("excited", 140)}<h2>검토 중</h2><p class="muted">승인되면 공개돼요</p>
       <div class="row gap center"><a class="btn ghost" href="#/me">내 게시물 보기</a><a class="btn" href="#/feed">피드로</a></div></div>`);
   }
 
@@ -1581,7 +1583,7 @@
     const shown = st.done ? st.n : st.n;
     return `<section class="streak ${st.done ? "done" : ""}">
       <div class="sk-main">
-        ${FLAME(st.done)}
+        <span class="sk-char">${mascot(st.done ? "excited" : st.n ? "curious" : "sleepy", 60)}${st.done ? FLAME(true) : ""}</span>
         <div class="grow"><b class="sk-n"><span class="num">${shown}</span>일 연속</b>
 </div>
         ${st.done ? `<span class="sk-ok">${ic("check", 16)}출석 완료</span>` : `<button class="btn sm sk-btn" id="checkin">출석 <b class="num">+${EARN.checkin[0]}P</b></button>`}
@@ -1592,10 +1594,10 @@
   }
   /* ---------- 이번 주 챌린지 ---------- */
   const CHALLENGES = [
-    { id: "cheapcombo", title: "3천 원 이하 꿀조합 만들기", desc: "합계 3,000원 이하로 꿀조합을 올려요", art: "store", goal: 1, href: "#/post/new/combo", cta: "꿀조합 올리기", points: 50, item: "pattern:stars", itemLabel: "별 무늬 배경", count: ctx => ctx.posts.filter(p => p.type === "combo" && comboTotal(p) <= 3000).length },
-    { id: "review2", title: "코스 사진 후기 2개 올리기", desc: "이번 주에 다녀온 코스를 사진으로 남겨요", art: "camera", goal: 2, href: "#/post/new/review", cta: "후기 올리기", points: 40, item: "frame:dashed", itemLabel: "점선 테두리", count: ctx => ctx.posts.filter(p => p.type === "review").length },
-    { id: "vote10", title: "투표 10개 참여하기", desc: "친구들 고민에 한 표씩 보태요", art: "ticket", goal: 10, href: "#/style", cta: "투표하러 가기", points: 30, item: "acc:hairpin", itemLabel: "머리핀", count: ctx => ctx.votes },
-    { id: "myvote", title: "내 고민 투표 올리기", desc: "옷이나 놀거리 고민을 투표로 물어봐요", art: "shirt", goal: 1, href: "#/post/new/vote", cta: "투표 올리기", points: 40, item: "acc:flower", itemLabel: "꽃 소품", count: ctx => ctx.posts.filter(p => p.type === "vote").length }
+    { id: "cheapcombo", title: "3천 원 이하 꿀조합 만들기", desc: "합계 3,000원 이하로 꿀조합을 올려요", art: "store", char: "money", goal: 1, href: "#/post/new/combo", cta: "꿀조합 올리기", points: 50, item: "pattern:stars", itemLabel: "별 무늬 배경", count: ctx => ctx.posts.filter(p => p.type === "combo" && comboTotal(p) <= 3000).length },
+    { id: "review2", title: "코스 사진 후기 2개 올리기", desc: "이번 주에 다녀온 코스를 사진으로 남겨요", art: "camera", char: "spot", goal: 2, href: "#/post/new/review", cta: "후기 올리기", points: 40, item: "frame:dashed", itemLabel: "점선 테두리", count: ctx => ctx.posts.filter(p => p.type === "review").length },
+    { id: "vote10", title: "투표 10개 참여하기", desc: "친구들 고민에 한 표씩 보태요", art: "ticket", char: "vote", goal: 10, href: "#/style", cta: "투표하러 가기", points: 30, item: "acc:hairpin", itemLabel: "머리핀", count: ctx => ctx.votes },
+    { id: "myvote", title: "내 고민 투표 올리기", desc: "옷이나 놀거리 고민을 투표로 물어봐요", art: "shirt", char: "shirt", goal: 1, href: "#/post/new/vote", cta: "투표 올리기", points: 40, item: "acc:flower", itemLabel: "꽃 소품", count: ctx => ctx.posts.filter(p => p.type === "vote").length }
   ];
   function weekInfo() {
     const today = new Date(), mon = addDays(today, -((today.getDay() + 6) % 7)); mon.setHours(0, 0, 0, 0);
@@ -1621,7 +1623,7 @@
     const ch = c.ch, full = c.n >= ch.goal;
     return `<section class="challenge">
       <div class="ch-head"><span class="ch-label">이번 주 챌린지</span><span class="ch-left num">D-${c.left}</span></div>
-      <div class="ch-body">${art(ch.art, "a-ch")}<div class="grow"><h3>${esc(ch.title)}</h3></div></div>
+      <div class="ch-body">${mascot(ch.char, 68)}<div class="grow"><h3>${esc(ch.title)}</h3></div></div>
       <div class="ch-bar"><i style="width:${Math.round((c.n / ch.goal) * 100)}%"></i></div>
       <div class="ch-meta"><span class="num">${c.n}/${ch.goal}</span><span><b class="num">+${ch.points}P</b> ${esc(ch.itemLabel)}</span></div>
       ${c.claimed ? `<div class="ch-done">${ic("check", 16)}완료</div>`
@@ -1651,6 +1653,7 @@
     paint(t, page(`
       ${header("포인트", { back: true })}
       <section class="pts-hero">
+        <div class="pts-char">${mascot("money", 96)}</div>
         <p>내 포인트</p>
         <b class="num">${pts().toLocaleString("ko-KR")}P</b>
         <a class="btn light sm" href="#/me/style">꾸미기 아이템 보러 가기</a>
@@ -1847,7 +1850,7 @@
       ${list.length ? `<div class="group noti-list">${list.map(x => `<a class="noti ${x.at > seen ? "new" : ""}" href="${x.href}">
           ${x.av ? avatarHtml(x.av, 40) : `<span class="noti-ic ${x.warn ? "warn" : ""}">${ic(x.icon, 19)}</span>`}
           <div class="grow"><p>${esc(x.text)}</p>${x.sub ? `<small>${esc(x.sub)}</small>` : ""}<time>${ago(x.at)}</time></div></a>`).join("")}</div>`
-        : `<div class="center-screen">${mascot("sleepy", 80)}<h2>알림 없음</h2></div>`}
+        : `<div class="center-screen">${mascot("sleepy", 120)}<h2>알림 없음</h2></div>`}
     `));
     if (list.length) S.store.saveProfile({ notiSeen: Date.now() }).then(() => { S.profile.notiSeen = Date.now(); }).catch(() => {});
   }
@@ -1929,8 +1932,8 @@
         <a class="link block tiny" href="#/me/edit">닉네임·지역·관심사 수정 (지역은 비공개)</a>
       </section>
       <div class="group me-links">
-        <a class="hist" href="#/points">${ic("coin", 20)}<div class="grow"><b>포인트</b></div><b class="num pts-val">${pts().toLocaleString("ko-KR")}P</b>${ic("chev", 18, "chev")}</a>
-        <a class="hist" href="#/saved">${ic("bookmark", 20)}<div class="grow"><b>저장한 항목</b></div>${ic("chev", 18, "chev")}</a>
+        <a class="hist" href="#/points">${mascot("money", 34)}<div class="grow"><b>포인트</b></div><b class="num pts-val">${pts().toLocaleString("ko-KR")}P</b>${ic("chev", 18, "chev")}</a>
+        <a class="hist" href="#/saved">${mascot("love", 34)}<div class="grow"><b>저장한 항목</b></div>${ic("chev", 18, "chev")}</a>
       </div>
       ${posts.length || reviews.length || subs.length ? `<div class="stats card me-stats">
         <div><b class="num">${posts.length}</b><span>게시물</span></div>
@@ -1950,7 +1953,7 @@
         ${subs.map(s => { const st = STATUS[s.status] || STATUS.pending; return `<${s.courseId ? `a href="#/course/${encodeURIComponent(s.courseId)}"` : "div"} class="card hist"><div class="grow"><b>${esc(s.title)}</b><p class="muted tiny">${s.status === "rejected" ? esc(rejectNote(s)) : esc(s.area) + " · " + fmtDate(s.createdAt)}</p></div><span class="status ${st[1]}">${st[0]}</span></${s.courseId ? "a" : "div"}>`; }).join("")}
       </section>` : ""}
       <section>
-        <div class="sec-head"><h2>활동</h2></div>
+        <div class="sec-head sec-char"><h2>활동</h2>${mascot("backpack", 64)}</div>
         <div class="group act-list">
           <button class="hist" id="up"><span class="act-ic">${ic("vote", 18)}</span><div class="grow"><b>투표 올리기</b></div><span class="pts-badge num">+${EARN.post[0]}P</span></button>
           <a class="hist" href="#/spot/list"><span class="act-ic">${ic("edit", 18)}</span><div class="grow"><b>코스 후기 쓰기</b></div><span class="pts-badge num">+${EARN.review[0]}P</span></a>

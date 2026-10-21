@@ -5,22 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>TeenSpot</title>
   <meta name="description" content="어른 리뷰 말고, 또래가 직접 해본 것. 10대 라이프스타일 커뮤니티">
-  <meta name="theme-color" content="#1E2A3E">
+  <meta name="theme-color" content="#141E33">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="TeenSpot">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="preload" href="fonts/SUIT-Variable.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/fredoka-700.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/theme-navy.css">
-  <script>try { if (localStorage.getItem("ts-theme") === "navy") document.documentElement.setAttribute("data-theme", "navy"); } catch (e) {}</script>
+  <script>try { if (localStorage.getItem("ts-theme") !== "light") document.documentElement.setAttribute("data-theme", "navy"); } catch (e) { document.documentElement.setAttribute("data-theme", "navy"); }</script>
 </head>
 <body>
   <div id="splash">
-    <svg class="mascot splash-pin" width="92" height="112" viewBox="0 0 122 148" aria-hidden="true"><ellipse cx="11" cy="99" rx="8" ry="5.5" transform="rotate(-35 11 99)" fill="#fff" stroke="#1E2A3E" stroke-width="4.5"/><ellipse cx="98" cy="77" rx="8" ry="5.5" transform="rotate(8 98 77)" fill="#fff" stroke="#1E2A3E" stroke-width="4.5"/><ellipse cx="47" cy="133" rx="8" ry="5.5" transform="rotate(-25 47 133)" fill="#fff" stroke="#1E2A3E" stroke-width="4.5"/><ellipse cx="108" cy="128" rx="8.5" ry="5.5" transform="rotate(-8 108 128)" fill="#fff" stroke="#1E2A3E" stroke-width="4.5"/><path d="M27 10c22 1 46 4 58 14 9 8 10 26 11 46 6 18 13 32 14 46-10 8-29 14-44 18-14-8-30-20-44-35-9-20-17-38-17-56 0-14 9-24 22-33z" fill="#fff" stroke="#1E2A3E" stroke-width="5" stroke-linejoin="round"/><path d="M19 43h10M59.5 41h15" stroke="#1E2A3E" stroke-width="3.4" stroke-linecap="round"/><ellipse cx="24" cy="55" rx="4.4" ry="6.4" fill="none" stroke="#1E2A3E" stroke-width="3.4"/><ellipse cx="67" cy="53" rx="4.4" ry="6.4" fill="none" stroke="#1E2A3E" stroke-width="3.4"/><g transform="translate(-6 1)"><path d="M51 70v-9q0-3 3-3t3 3-3 3h-3" stroke="#1E2A3E" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M51 70l2 6" stroke="#1E2A3E" stroke-width="3.2" stroke-linecap="round"/></g></svg>
+    <img class="mascot splash-pin" src="images/spot/wave.png" width="132" height="132" alt="">
   </div>
   <div id="net">인터넷 연결이 끊겼어요</div>
   <main id="app"></main>
