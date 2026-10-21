@@ -1048,3 +1048,4 @@ img.mascot { display: block; object-fit: contain; flex: none; -webkit-user-drag:
 .center-screen img.mascot { margin: 0 auto 6px; }
 .sec-char { align-items: flex-end; margin-bottom: 6px; }
 .sec-char img.mascot { margin: -20px 4px -8px 0; }
+.logo-link { display: inline-flex; padding: 6px 0; }

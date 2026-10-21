@@ -107,7 +107,7 @@
       <div class="topbar-right">${opts.right || ""}</div>
     </header>`;
     return `<header class="topbar root">
-      ${opts.brand ? window.TSBrand.wordmark("wm-bar") : `<h1 class="title-lg">${esc(title)}</h1>`}
+      ${opts.brand ? `<a class="logo-link" href="#/home" aria-label="홈으로">${window.TSBrand.wordmark("wm-bar")}</a>` : `<h1 class="title-lg">${esc(title)}</h1>`}
       <div class="topbar-right">${opts.right || ""}</div>
     </header>`;
   }
