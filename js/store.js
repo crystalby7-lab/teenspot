@@ -2,7 +2,7 @@
 (function () {
   const CFG = window.TS_CONFIG || {};
   const SEED = window.TS_SEED || { courses: [], polls: [] };
-  const SEED_V = 6; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
+  const SEED_V = 7; // 예시 투표 버전 (바뀌면 체험 모드 예시를 새로 깔아요)
   const useFirebase = !!(CFG.firebase && CFG.firebase.apiKey);
   const now = () => Date.now();
   const rid = () => Math.random().toString(36).slice(2, 9) + now().toString(36);
@@ -80,6 +80,11 @@
     if (p.playTags) out.playTags = p.playTags.slice(0, 3);
     if (p.personalColor != null) out.personalColor = p.personalColor;
     if (p.badge != null) out.badge = String(p.badge).slice(0, 20);
+    if (p.xp != null) out.xp = Math.max(0, Math.round(Number(p.xp) || 0));
+    if (p.weekXp != null) out.weekXp = Math.max(0, Math.round(Number(p.weekXp) || 0));
+    if (p.weekKey != null) out.weekKey = String(p.weekKey).slice(0, 10);
+    if (p.achv) out.achv = p.achv.slice(0, 40).map(x => String(x).slice(0, 20));
+    if (p.mateCount != null) out.mateCount = Math.max(0, Math.round(Number(p.mateCount) || 0));
     return out;
   }
 
@@ -104,7 +109,13 @@
       SEED.polls.forEach((p, i) => { polls[p.id] = { ...p, createdAt: now() - i }; });
       return { authUid: null, users: {}, nicknames: {}, courses, reviews: {}, polls, votes: {}, saves: {}, submissions: {}, reports: {}, images: {}, posts: seedPosts(), reactions: {}, publics: seedPublics(), seedV: SEED_V };
     }
-    function seedPublics() { return JSON.parse(JSON.stringify(SEED.publicProfiles || {})); }
+    function seedPublics() {
+      const o = JSON.parse(JSON.stringify(SEED.publicProfiles || {}));
+      const t = new Date(), m = new Date(t); m.setDate(t.getDate() - ((t.getDay() + 6) % 7));
+      const wk = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}-${String(m.getDate()).padStart(2, "0")}`;
+      Object.values(o).forEach(p => { if (p.weekKey === "__WEEK__") p.weekKey = wk; });
+      return o;
+    }
     function seedPosts() {
       const posts = {};
       (SEED.posts || []).forEach((p, i) => { posts[p.id] = { ...p, status: "approved", pollId: p.type === "vote" ? p.id : null, createdAt: now() - (i + 1) * 3600e3, approvedAt: now() - (i + 1) * 3600e3 }; });
@@ -115,6 +126,7 @@
       try { const raw = localStorage.getItem(KEY); if (raw) d = JSON.parse(raw); } catch (e) {}
       if (!d) d = fresh();
       if (!d.publics) d.publics = seedPublics();
+      else { const sp = seedPublics(); Object.keys(sp).forEach(k => { if (sp[k].demo && d.publics[k] && d.publics[k].weekKey !== sp[k].weekKey) d.publics[k] = sp[k]; }); }
       if (!d.posts) { d.posts = seedPosts(); d.images = d.images || {}; d.reactions = d.reactions || {}; }
       if (d.seedV !== SEED_V) {
         // 예시 투표·게시물을 새 버전으로 교체 (사용자가 만든 것은 유지)
@@ -123,6 +135,7 @@
         const t = now();
         SEED.polls.forEach((p, i) => { d.polls[p.id] = { ...p, createdAt: t - i * 60e3 }; });
         Object.assign(d.posts, seedPosts());
+        Object.assign(d.publics, seedPublics());
         d.seedV = SEED_V; save();
       }
       return d;
@@ -210,6 +223,7 @@
       // 공개 프로필
       async getPublicProfile(uid) { return db().publics[uid || me()] || null; },
       async getPublicProfiles(uids) { const o = {}; uids.forEach(u => { if (db().publics[u]) o[u] = db().publics[u]; }); return o; },
+      async weeklyBoard(weekKey) { return Object.entries(db().publics).map(([uid, p]) => ({ ...p, uid })).filter(p => p.weekKey === weekKey && !p.official); },
       async savePublicProfile(p) { db().publics[me()] = { ...(db().publics[me()] || {}), ...cleanPublic(p), uid: me(), updatedAt: now() }; save(); },
 
       // 피드
@@ -437,6 +451,7 @@
         }));
         return o;
       },
+      async weeklyBoard(weekKey) { return list(await getDocs(query(collection(fs, "publicProfiles"), where("weekKey", "==", weekKey)))).map(p => ({ ...p, uid: p.uid || p.id })).filter(p => !p.official); },
       async savePublicProfile(p) { await setDoc(doc(fs, "publicProfiles", me()), { ...cleanPublic(p), uid: me(), updatedAt: now() }, { merge: true }); delete pubCache[me()]; },
       async uploadImage(dataUrl) { const r = await addDoc(collection(fs, "images"), { data: dataUrl, uid: me(), createdAt: now() }); return "img:" + r.id; },
       async getImage(id) { const s = await getDoc(doc(fs, "images", id)); return s.exists() ? s.data().data : ""; },

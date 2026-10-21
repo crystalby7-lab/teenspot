@@ -1049,3 +1049,68 @@ img.mascot { display: block; object-fit: contain; flex: none; -webkit-user-drag:
 .sec-char { align-items: flex-end; margin-bottom: 6px; }
 .sec-char img.mascot { margin: -20px 4px -8px 0; }
 .logo-link { display: inline-flex; padding: 6px 0; }
+
+/* ---------- 레벨 ---------- */
+.lvl { display: block; }
+.lvl-top { display: flex; align-items: center; gap: 8px; }
+.lvl-badge { flex: none; font-size: 12px; font-weight: 800; color: var(--deep, #141E33); background: var(--accent); padding: 3px 8px; border-radius: 8px; }
+.lvl-top b { font-size: 14px; font-weight: 700; }
+.lvl-xp { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--muted); }
+.lvl-bar { height: 8px; margin-top: 8px; border-radius: 4px; background: var(--navy-50); overflow: hidden; }
+.lvl-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #FFE066, var(--accent)); transition: width .6s var(--ease); }
+.lvl.big .lvl-top b { font-size: 17px; }
+.lvl.big .lvl-bar { height: 12px; border-radius: 6px; }
+.sk-level { display: block; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.me-level { display: block; margin-top: 14px; }
+
+/* ---------- 축하 화면 ---------- */
+.celebrate { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 6px 0 4px; }
+.celebrate img.mascot { animation: celebPop .7s var(--ease) both; }
+.celebrate h3 { font-size: 24px; margin: 6px 0 4px; }
+.celebrate p { margin: 0 0 20px; color: var(--sub); font-weight: 600; }
+.celebrate .btn { margin-top: 4px; }
+@keyframes celebPop { 0% { transform: scale(.4) rotate(-10deg); opacity: 0; } 60% { transform: scale(1.12) rotate(4deg); opacity: 1; } 100% { transform: scale(1); } }
+
+/* ---------- 업적 ---------- */
+.achv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.achv { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px 12px; border-radius: var(--r-lg); background: var(--card); text-align: center; }
+.achv span { font-size: 12px; font-weight: 700; color: var(--sub); line-height: 1.3; }
+.achv:not(.on) img.mascot { filter: grayscale(1) brightness(.55); opacity: .5; }
+.achv:not(.on) span { color: var(--muted); }
+.achv.on { box-shadow: inset 0 0 0 1.5px rgba(255, 212, 59, .45); }
+
+/* ---------- 리그 ---------- */
+.league-mini { display: block; margin-top: 12px; padding: 16px; border-radius: var(--r-xl); background: var(--card); }
+.lg-head { display: flex; justify-content: space-between; }
+.lg-body { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+.lg-podium { display: flex; align-items: flex-end; }
+.lg-p { position: relative; margin-right: -8px; }
+.lg-p .avatar { box-shadow: 0 0 0 3px var(--card); }
+.lg-p em { position: absolute; right: -2px; bottom: -4px; min-width: 18px; height: 18px; border-radius: 9px; font-style: normal; font-size: 10.5px; font-weight: 800; display: grid; place-items: center; background: var(--navy-200); color: var(--ink); box-shadow: 0 0 0 2px var(--card); }
+.lg-p.r1 em { background: var(--accent); color: #141E33; }
+.lg-p.r1 { order: 2; } .lg-p.r2 { order: 1; } .lg-p.r3 { order: 3; }
+.lg-body .grow { margin-left: 8px; }
+.lg-body .grow b { display: block; font-size: 22px; font-weight: 800; }
+.lg-body .grow span { font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.league-hero { display: flex; align-items: center; gap: 12px; margin-top: 6px !important; padding: 14px 18px; border-radius: var(--r-xl); background: linear-gradient(160deg, #26365A, #1D2A43); }
+.league-hero p { margin: 0; font-size: 12.5px; font-weight: 700; color: var(--accent); }
+.league-hero h1 { font-size: 34px; }
+.league-hero span { font-size: 13px; color: var(--sub); font-weight: 700; }
+.league-rule { font-size: 12.5px; color: var(--muted); margin: 12px 2px; }
+.league-list .lg-row { gap: 12px; }
+.league-list .lg-row + .lg-row { box-shadow: inset 0 1px 0 var(--line); }
+.lg-rank { width: 24px; text-align: center; font-weight: 800; color: var(--muted); }
+.lg-row.top .lg-rank { color: var(--accent); }
+.lg-row.me { background: rgba(255, 212, 59, .08); }
+.lg-row .grow { min-width: 0; }
+.lg-row .grow b { display: block; }
+.lg-xp { flex: none; font-size: 14px; }
+
+/* ---------- 메이트 ---------- */
+.mate-btn { margin-top: 14px; min-width: 140px; }
+.mate-strip { gap: 10px; }
+.mate-sug { flex: 0 0 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px 12px; border-radius: var(--r-lg); background: var(--card); text-align: center; }
+.mate-sug b { font-size: 12.5px; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mate-sug span { font-size: 11px; color: var(--muted); font-weight: 700; }
+.pp-stats > div { min-width: 70px; }
+.share-img { margin-top: 12px; }

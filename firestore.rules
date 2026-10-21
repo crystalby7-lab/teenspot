@@ -36,7 +36,7 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create, update: if isMe(uid)
         && request.resource.data.uid == uid
-        && request.resource.data.keys().hasOnly(['uid', 'nickname', 'birthYear', 'birthMonth', 'avatar', 'badge', 'styleTags', 'playTags', 'personalColor', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'nickname', 'birthYear', 'birthMonth', 'avatar', 'badge', 'styleTags', 'playTags', 'personalColor', 'xp', 'weekXp', 'weekKey', 'achv', 'mateCount', 'updatedAt'])
         && request.resource.data.nickname is string
         && request.resource.data.nickname.size() >= 2
         && request.resource.data.nickname.size() <= 10

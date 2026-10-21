@@ -118,7 +118,13 @@ window.TS_SEED = {
   ],
   // 공개 프로필 (TeenSpot 에디터 계정)
   publicProfiles: {
-    teenspot: { nickname: "TeenSpot 에디터", official: true, avatar: { skin: 1, hairColor: 0, shirt: 0, bg: 0, hair: "bun", eyes: "smile", mouth: "smile", acc: "glasses", cheek: true }, styleTags: ["꾸안꾸", "캐주얼"], playTags: ["사진", "카페"], personalColor: "" }
+    teenspot: { nickname: "TeenSpot 에디터", official: true, avatar: { skin: 1, hairColor: 0, shirt: 0, bg: 0, hair: "bun", eyes: "smile", mouth: "smile", acc: "glasses", cheek: true }, styleTags: ["꾸안꾸", "캐주얼"], playTags: ["사진", "카페"], personalColor: "" },
+    "demo-r0": { nickname: "민트초코칩", demo: true, avatar: {"skin": 1, "hairColor": 2, "shirt": 1, "bg": 0, "hair": "wave", "eyes": "smile", "mouth": "tongue", "acc": "none", "cheek": true}, styleTags: ["꾸안꾸"], playTags: [], personalColor: "", xp: 344, weekXp: 86, weekKey: "__WEEK__" },
+    "demo-r1": { nickname: "떡볶이러버", demo: true, avatar: {"skin": 2, "hairColor": 1, "shirt": 3, "bg": 1, "hair": "pony", "eyes": "dot", "mouth": "smile", "acc": "cap", "cheek": true}, styleTags: ["스트릿"], playTags: [], personalColor: "", xp: 256, weekXp: 64, weekKey: "__WEEK__" },
+    "demo-r2": { nickname: "신촌산책러", demo: true, avatar: {"skin": 0, "hairColor": 3, "shirt": 2, "bg": 2, "hair": "long", "eyes": "smile", "mouth": "smile", "acc": "ribbon", "cheek": true}, styleTags: ["러블리"], playTags: [], personalColor: "", xp: 208, weekXp: 52, weekKey: "__WEEK__" },
+    "demo-r3": { nickname: "코노장인", demo: true, avatar: {"skin": 1, "hairColor": 4, "shirt": 4, "bg": 3, "hair": "short", "eyes": "wink", "mouth": "smile", "acc": "headphones", "cheek": true}, styleTags: ["캐주얼"], playTags: [], personalColor: "", xp: 164, weekXp: 41, weekKey: "__WEEK__" },
+    "demo-r4": { nickname: "이대빵순이", demo: true, avatar: {"skin": 2, "hairColor": 0, "shirt": 5, "bg": 4, "hair": "bun", "eyes": "dot", "mouth": "smile", "acc": "none", "cheek": true}, styleTags: ["모리걸"], playTags: [], personalColor: "", xp: 108, weekXp: 27, weekKey: "__WEEK__" },
+    "demo-r5": { nickname: "홍제폭포", demo: true, avatar: {"skin": 0, "hairColor": 2, "shirt": 0, "bg": 5, "hair": "bangs", "eyes": "dot", "mouth": "smile", "acc": "glasses", "cheek": true}, styleTags: ["미니멀"], playTags: [], personalColor: "", xp: 60, weekXp: 15, weekKey: "__WEEK__" }
   },
   // 예시 피드 게시물 (TeenSpot 에디터 계정)
   posts: [

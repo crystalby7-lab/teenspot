@@ -201,6 +201,9 @@
       case "me": return p[1] === "edit" ? screenMeEdit(t) : p[1] === "style" ? screenAvatarEdit(t) : screenMe(t);
       case "u": return screenUser(t, p[1]);
       case "points": return screenPoints(t);
+      case "league": return screenLeague(t);
+      case "mates": return screenMates(t);
+      case "achievements": return screenAchievements(t);
       case "notifications": return screenNotis(t);
       case "search": return screenSearch(t, q);
       case "blocked": return screenBlockList(t);
@@ -602,6 +605,7 @@
     const top = popular(local).slice(0, 3);
     const nextPoll = polls.filter(notFood).find(p => !votes[p.id] && !isEnded(p));
     const chal = await challengeState();
+    const board = await leagueBoard();
     const themes = THEMES.map(th => ({ th, n: { c: courses.filter(th.course).length, b: visible(feed).filter(p => p.type === "combo" && th.combo(p)).length } }));
     paint(t, page(`
       ${header("", { brand: true, right: `<a class="gu-chip" href="#/me/edit">${ic("pin", 15)}${esc(gu)}</a>${bellHtml()}` })}
@@ -617,6 +621,8 @@
       </section>
       ${streakCard()}
       ${challengeCard(chal)}
+      ${leagueMini(board)}
+      ${mateSection(feed, board)}
       <section>
         <div class="sec-head"><h2>이번 주 테마</h2></div>
         <div class="themes">${themes.map(({ th, n }) => `<a class="theme-card" href="#/theme/${th.id}" style="--tone:${th.tone}">${mascot(th.char, 76)}<b>${esc(th.title)}</b><small class="num">코스 ${n.c}  꿀조합 ${n.b}</small></a>`).join("")}</div>
@@ -969,10 +975,12 @@
       <h1 class="poll-q">${esc(p.question)}</h1>
       <div class="poll-body pv">${voteAreaHtml(p, mine, r)}</div>
       ${r ? `<div class="verdict">${mascot(!win ? "curious" : !mine ? "wow" : win === mine ? "happy" : "wink", 64)}<p>${verdict}</p></div>
+        <button class="btn ghost block share-img" id="shareimg">${ic("share", 18)} 결과 이미지로 공유</button>
         ${next ? `<a class="btn block lg" href="#/poll/${encodeURIComponent(next.id)}">다음 투표</a>` : `<a class="btn block lg ghost" href="#/style">투표 목록으로</a>`}`
         : ""}
     `, "style"), () => {
       bindCommon();
+      const si = $app.querySelector("#shareimg"); if (si && r) si.onclick = () => shareCard(pollShareData(p, r));
       $app.querySelectorAll("[data-pick]").forEach(b => (b.onclick = async () => {
         $app.querySelectorAll("[data-pick]").forEach(x => (x.disabled = true)); b.classList.add("picked");
         try { await S.store.vote(id, b.dataset.pick); const got = await award("vote", id); if (got) toast(`투표 완료 +${got}P`); render(); } catch (e) { toast(e.message || "투표에 실패했어요"); $app.querySelectorAll("[data-pick]").forEach(x => (x.disabled = false)); }
@@ -1207,7 +1215,12 @@
       ${header("게시물", { back: true })}
       ${pending && p.status !== "approved" ? `<p class="hint ${p.status === "rejected" ? "hint-warn" : ""}">${p.status === "rejected" ? `<b>공개되지 않았어요</b><br>${esc(rejectNote(p))}. 내용을 바꿔서 다시 올릴 수 있어요` : "검토 중이에요. 운영자 확인 후 피드에 공개돼요"}</p>` : ""}
       <div class="feed">${feedCard(p, ctx)}</div>
-    `), () => bindFeed([p], ctx));
+      ${p.status === "approved" && (p.type === "combo" || (p.type === "vote" && ctx.results[p.pollId])) ? `<button class="btn ghost block share-img" id="shareimg">${ic("share", 18)} 이미지로 공유</button>` : ""}
+    `), () => {
+      bindFeed([p], ctx);
+      const si = $app.querySelector("#shareimg");
+      if (si) si.onclick = async () => { const r = p.type === "vote" ? await S.store.pollResult(p.pollId) : null; shareCard(p.type === "combo" ? comboShareData(p) : pollShareData(p, r)); };
+    });
   }
 
   /* =========================================================
@@ -1505,8 +1518,10 @@
         ${avatarHtml(pub, 96, "lg")}
         <h1>${esc(pub.nickname)}</h1>
         <div class="pp-meta">${pub.official ? `<span class="badge-official">공식</span>` : age ? `<span class="age-chip">${age}살</span>` : ""}${pub.personalColor ? `<span class="pc-chip ${esc(pub.personalColor)}">${pcLabel(pub.personalColor)}</span>` : ""}${badgeOf(pub)}</div>
-        <div class="pp-stats"><div><b>${posts.length}</b><span>게시물</span></div><div><b>${likes}</b><span>받은 좋아요</span></div></div>
+        <div class="pp-stats"><div><b class="num">Lv.${levelOf(pub.xp || 0)}</b><span>${esc(titleOf(levelOf(pub.xp || 0)))}</span></div><div><b class="num">${posts.length}</b><span>게시물</span></div><div><b class="num">${pub.mateCount || 0}</b><span>메이트</span></div></div>
+        ${!mine && !pub.official ? `<button class="btn ${mateSet().has(uid) ? "ghost" : ""} mate-btn" id="mate">${mateSet().has(uid) ? "메이트" : "메이트 추가"}</button>` : ""}
       </section>
+      <section><div class="sec-head"><h2>업적</h2><span class="muted tiny num">${(pub.achv || []).length}개</span></div>${achvGrid(pub.achv, false)}</section>
       <section class="card pp-tags">
         <div><span class="pp-label">추구미</span><div class="tagrow">${(pub.styleTags || []).length ? pub.styleTags.map(x => `<a class="tag lg" href="#/search?tag=${encodeURIComponent(x)}">${esc(x)}</a>`).join("") : `<span class="muted tiny">${mine ? "아직 고르지 않았어요" : "비공개"}</span>`}</div></div>
         <div><span class="pp-label">좋아하는 놀거리</span><div class="tagrow">${(pub.playTags || []).length ? pub.playTags.map(x => `<span class="tag lg soft">${esc(x)}</span>`).join("") : `<span class="muted tiny">${mine ? "아직 고르지 않았어요" : "비공개"}</span>`}</div></div>
@@ -1517,6 +1532,8 @@
         ${isBlocked ? emptyHtml("block", "차단한 사용자예요", "오른쪽 위 메뉴에서 차단을 풀 수 있어요") : posts.length ? `<div class="thumb-grid">${posts.map(x => `<a href="#/post/${encodeURIComponent(x.id)}">${postTile(x)}</a>`).join("")}</div>` : emptyHtml("image", "아직 공개된 게시물이 없어요", "")}
       </section>
     `), () => {
+      const mb = $app.querySelector("#mate");
+      if (mb) mb.onclick = async () => { const on = await toggleMate(uid); mb.textContent = on ? "메이트" : "메이트 추가"; mb.classList.toggle("ghost", on); toast(on ? `${pub.nickname}님을 메이트로 추가했어요` : "메이트에서 뺐어요"); };
       const m = $app.querySelector("#more");
       if (m) m.onclick = () => {
         const isB = blockedSet().has(uid);
@@ -1544,7 +1561,9 @@
     const key = type + ":" + id, rw = S.profile.rewards || {};
     if (rw[key]) return 0;
     const [amt, label] = EARN[type];
-    await savePts({ points: pts() + amt, rewards: { ...rw, [key]: Date.now() }, pointLog: [{ label, amt, at: Date.now() }, ...(S.profile.pointLog || [])].slice(0, 30) });
+    const before = levelOf(myXp());
+    await savePts({ points: pts() + amt, rewards: { ...rw, [key]: Date.now() }, pointLog: [{ label, amt, at: Date.now() }, ...(S.profile.pointLog || [])].slice(0, 30), ...xpUpd(amt) });
+    afterGain(before);
     return amt;
   }
   async function spend(itemKey, price, label) {
@@ -1552,6 +1571,205 @@
     const owned = [...ownedSet(), itemKey];
     await savePts({ points: pts() - price, owned, pointLog: [{ label: label + " 열기", amt: -price, at: Date.now() }, ...(S.profile.pointLog || [])].slice(0, 30) });
     return true;
+  }
+  /* ---------- 이번 주 리그 ---------- */
+  async function leagueBoard() {
+    let list = [];
+    try { list = await S.store.weeklyBoard(weekKeyNow()); } catch (e) {}
+    const me = S.user.uid, mine = { ...(S.pub || {}), uid: me, nickname: S.profile.nickname, weekXp: S.profile.weekKey === weekKeyNow() ? S.profile.weekXp || 0 : 0, xp: myXp() };
+    list = list.filter(p => p.uid !== me && !blockedSet().has(p.uid));
+    list.push(mine);
+    return list.sort((a, b) => (b.weekXp || 0) - (a.weekXp || 0)).slice(0, 30).map((p, i) => ({ ...p, rank: i + 1, me: p.uid === me }));
+  }
+  function leagueMini(board) {
+    const me = board.find(p => p.me), top = board.slice(0, 3), w = weekInfo();
+    return `<a class="league-mini" href="#/league">
+      <div class="lg-head"><span class="ch-label">이번 주 리그</span><span class="ch-left num">D-${w.left}</span></div>
+      <div class="lg-body">
+        <div class="lg-podium">${top.map(p => `<span class="lg-p r${p.rank}">${avatarHtml(p, p.rank === 1 ? 46 : 38)}<em class="num">${p.rank}</em></span>`).join("")}</div>
+        <div class="grow"><b class="num">${me ? me.rank : "-"}위</b><span class="num">${me ? me.weekXp || 0 : 0} XP</span></div>
+        ${ic("chev", 18, "chev")}
+      </div>
+    </a>`;
+  }
+  async function screenLeague(t) {
+    paint(t, page(header("이번 주 리그", { back: true }) + loadingHtml()));
+    const board = await leagueBoard(), w = weekInfo(), me = board.find(p => p.me);
+    paint(t, page(`
+      ${header("이번 주 리그", { back: true })}
+      <section class="league-hero">${mascot("go", 104)}<div><p class="num">D-${w.left}</p><h1>${me ? me.rank : "-"}위</h1><span class="num">${me ? me.weekXp || 0 : 0} XP</span></div></section>
+      <p class="league-rule">월요일마다 새로 시작해요. 투표·후기·꿀조합·출석으로 XP를 모아요</p>
+      <div class="group league-list">${board.map(p => `<a class="hist lg-row ${p.me ? "me" : ""} ${p.rank <= 3 ? "top" : ""}" href="#/u/${encodeURIComponent(p.uid)}">
+        <span class="lg-rank num">${p.rank}</span>${avatarHtml(p, 38)}
+        <div class="grow"><b>${esc(p.nickname || "")}${p.me ? " (나)" : ""}</b><span class="muted tiny">Lv.${levelOf(p.xp || 0)}</span></div>
+        <b class="num lg-xp">${p.weekXp || 0} XP</b></a>`).join("")}</div>
+    `));
+  }
+  function mateSection(feed, board) {
+    const mates = mateSet();
+    const posts = visible(feed).filter(p => mates.has(p.uid)).slice(0, 6);
+    if (posts.length) return `<section><div class="sec-head"><h2>메이트 소식</h2><a href="#/mates" class="more-link">메이트${ic("chev", 14)}</a></div>
+      <div class="strip">${posts.map(p => `<a class="strip-item" href="#/post/${encodeURIComponent(p.id)}">${postTile(p)}<span>${esc(p.nickname || "")}</span></a>`).join("")}</div></section>`;
+    const sugg = board.filter(p => !p.me && !mates.has(p.uid)).slice(0, 8);
+    if (!sugg.length) return "";
+    return `<section><div class="sec-head"><h2>메이트를 추가해봐요</h2></div>
+      <div class="strip mate-strip">${sugg.map(p => `<a class="mate-sug" href="#/u/${encodeURIComponent(p.uid)}">${avatarHtml(p, 56)}<b>${esc(p.nickname || "")}</b><span class="num">Lv.${levelOf(p.xp || 0)}</span></a>`).join("")}</div></section>`;
+  }
+  async function screenMates(t) {
+    paint(t, page(header("메이트", { back: true }) + loadingHtml()));
+    const ids = [...mateSet()], pubs = await S.store.getPublicProfiles(ids);
+    paint(t, page(`
+      ${header("메이트", { back: true })}
+      ${ids.length ? `<div class="group">${ids.map(u => { const p = pubs[u] || { nickname: "알 수 없음" }; return `<a class="hist" href="#/u/${encodeURIComponent(u)}">${avatarHtml(p, 40)}<div class="grow"><b>${esc(p.nickname)}</b><span class="muted tiny num">Lv.${levelOf(p.xp || 0)} ${esc(titleOf(levelOf(p.xp || 0)))}</span></div>${ic("chev", 18, "chev")}</a>`; }).join("")}</div>`
+        : emptyHtml("user", "아직 메이트가 없어요", "", `<a class="btn sm" href="#/league">리그에서 찾아보기</a>`)}
+    `));
+  }
+  async function screenAchievements(t) {
+    paint(t, page(header("업적", { back: true }) + loadingHtml()));
+    await checkAchievements();
+    const have = (S.profile.achv || []).length;
+    paint(t, page(`
+      ${header("업적", { back: true })}
+      <section class="card">${levelBar(myXp(), "big")}</section>
+      <section><div class="sec-head"><h2>업적</h2><span class="muted tiny num">${have}/${ACHV.length}</span></div>${achvGrid(S.profile.achv, true)}</section>
+    `));
+  }
+  /* ---------- 공유 카드 (이미지로 저장·공유) ---------- */
+  function loadImg(src) { return new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; }); }
+  async function shareCard(o) {
+    const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    const grd = g.createLinearGradient(0, 0, 0, H); grd.addColorStop(0, "#1D2A43"); grd.addColorStop(1, "#141E33");
+    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    const F = w => `${w} SUIT Variable, SUIT, Apple SD Gothic Neo, sans-serif`;
+    g.fillStyle = "#FFD43B"; g.font = F("700 40px"); g.fillText(o.kicker || "TeenSpot", 80, 130);
+    g.fillStyle = "#fff"; g.font = F("800 76px");
+    const words = String(o.title).split(" "); let line = "", y = 240;
+    words.forEach(wd => { const t = line ? line + " " + wd : wd; if (g.measureText(t).width > 760) { g.fillText(line, 80, y); y += 92; line = wd; } else line = t; });
+    g.fillText(line, 80, y); y += 70;
+    try { const m = await loadImg(`images/spot/${o.pose || "happy"}.png`); g.drawImage(m, W - 330, 70, 260, 260); } catch (e) {}
+    y = Math.max(y, 380);
+    o.rows.forEach(r => {
+      const rh = 120, x = 80, w = W - 160;
+      g.fillStyle = "rgba(255,255,255,.07)"; roundRect(g, x, y, w, rh, 30); g.fill();
+      if (r.pct != null) { g.fillStyle = r.win ? "rgba(255,212,59,.35)" : "rgba(255,255,255,.08)"; roundRect(g, x, y, Math.max(60, w * r.pct / 100), rh, 30); g.fill(); }
+      g.fillStyle = "#fff"; g.font = F("700 46px"); g.fillText(r.label, x + 40, y + 76);
+      g.font = F("800 50px"); g.fillStyle = r.win ? "#FFD43B" : "#C3CBDA"; const v = r.value; g.fillText(v, x + w - 40 - g.measureText(v).width, y + 78);
+      y += rh + 24;
+    });
+    if (o.footer) { g.fillStyle = "#8592AA"; g.font = F("600 38px"); g.fillText(o.footer, 80, Math.min(H - 150, y + 40)); }
+    g.fillStyle = "#fff"; g.font = "700 54px Fredoka, sans-serif"; g.fillText("teenspot", 80, H - 80);
+    g.fillStyle = "#8592AA"; g.font = F("600 34px"); const tag = "또래가 직접 해본 것"; g.fillText(tag, W - 80 - g.measureText(tag).width, H - 84);
+    const blob = await new Promise(r => c.toBlob(r, "image/png"));
+    const file = new File([blob], "teenspot.png", { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: o.title }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "teenspot.png"; document.body.appendChild(a); a.click(); a.remove();
+    toast("이미지를 저장했어요");
+  }
+  function roundRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  function pollShareData(p, r) {
+    const res = pcts(p, r), win = winnerOf(p, r);
+    return { kicker: (CATS[p.cat] || "투표") + " 투표 결과", title: p.question, pose: "vote", rows: optKeys(p).map(k => ({ label: p[k].label, value: res.v[k] + "%", pct: res.v[k], win: k === win })), footer: `또래 ${res.total}명 참여` };
+  }
+  function comboShareData(p) {
+    return { kicker: (STORES[p.store] || "") + " 꿀조합", title: p.title, pose: "money", rows: [...(p.items || []).slice(0, 5).map(i => ({ label: i.name, value: i.price ? won(i.price) : "-" })), { label: "합계", value: won(comboTotal(p)), win: true }], footer: p.text || "" };
+  }
+  /* ---------- 레벨·경험치 ---------- */
+  // 레벨 n이 되려면 누적 25·n·(n-1) XP (2레벨 50, 3레벨 150, 4레벨 300, 5레벨 500 …)
+  const LEVEL_TITLES = [[1, "새싹 스팟이"], [3, "동네 탐험가"], [5, "스팟 메이커"], [8, "스팟 마스터"], [12, "전설의 스팟이"]];
+  const xpFor = n => 25 * n * (n - 1);
+  const levelOf = xp => { let n = 1; while (xp >= xpFor(n + 1)) n++; return n; };
+  const titleOf = lv => LEVEL_TITLES.filter(([n]) => lv >= n).pop()[1];
+  const myXp = () => (S.profile && S.profile.xp) || 0;
+  const weekKeyNow = () => { const t = new Date(), m = new Date(t); m.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return dayStr(m); };
+  function xpUpd(amt) {
+    const wk = weekKeyNow(), cur = S.profile.weekKey === wk ? S.profile.weekXp || 0 : 0;
+    return { xp: myXp() + amt, weekXp: cur + amt, weekKey: wk };
+  }
+  function levelInfo(xp) {
+    const lv = levelOf(xp), lo = xpFor(lv), hi = xpFor(lv + 1);
+    return { lv, title: titleOf(lv), cur: xp - lo, need: hi - lo, pct: Math.round(((xp - lo) / (hi - lo)) * 100) };
+  }
+  function levelBar(xp, cls) {
+    const L = levelInfo(xp);
+    return `<div class="lvl ${cls || ""}"><div class="lvl-top"><span class="lvl-badge num">Lv.${L.lv}</span><b>${esc(L.title)}</b><span class="lvl-xp num">${L.cur}/${L.need} XP</span></div><div class="lvl-bar"><i style="width:${L.pct}%"></i></div></div>`;
+  }
+  let pubTimer = null;
+  function afterGain(beforeLv) {
+    const lv = levelOf(myXp());
+    if (lv > beforeLv) setTimeout(() => celebrate("excited", `레벨 ${lv} 달성`, titleOf(lv)), 400);
+    clearTimeout(pubTimer); pubTimer = setTimeout(() => { publishProgress(); checkAchievements(); }, 300);
+  }
+  async function publishProgress() {
+    if (!S.profile) return;
+    const p = S.profile, upd = { nickname: p.nickname, xp: p.xp || 0, weekXp: p.weekKey === weekKeyNow() ? p.weekXp || 0 : 0, weekKey: weekKeyNow(), achv: p.achv || [], mateCount: (p.mates || []).length };
+    try { await S.store.savePublicProfile(upd); S.pub = { ...(S.pub || {}), ...upd }; } catch (e) {}
+  }
+  // 축하 화면 (레벨 업, 업적)
+  function celebrate(pose, title, sub) {
+    const tt = document.getElementById("toast"); if (tt) tt.classList.remove("show");
+    const el = openModal(`<div class="celebrate">${mascot(pose, 150)}<h3>${esc(title)}</h3>${sub ? `<p>${esc(sub)}</p>` : ""}<button class="btn block lg" data-act="close-modal">좋아요</button></div>`);
+    el.classList.add("celebrate-sheet");
+  }
+  /* ---------- 업적 ---------- */
+  const ACHV = [
+    { id: "first-checkin", title: "첫 출석", pose: "wave", test: s => s.checkins >= 1 },
+    { id: "streak7", title: "7일 연속 출석", pose: "excited", test: s => s.bestStreak >= 7 },
+    { id: "streak30", title: "30일 연속 출석", pose: "love", test: s => s.bestStreak >= 30 },
+    { id: "vote10", title: "투표 10번", pose: "vote", test: s => s.votes >= 10 },
+    { id: "vote50", title: "투표 50번", pose: "focus", test: s => s.votes >= 50 },
+    { id: "first-post", title: "첫 고민 올리기", pose: "shirt", test: s => s.polls >= 1 },
+    { id: "first-combo", title: "첫 꿀조합", pose: "money", test: s => s.combos >= 1 },
+    { id: "combo5", title: "꿀조합 연구원", pose: "happy", test: s => s.combos >= 5 },
+    { id: "first-review", title: "첫 코스 후기", pose: "spot", test: s => s.reviews >= 1 },
+    { id: "mate3", title: "메이트 3명", pose: "friends", test: s => s.mates >= 3 },
+    { id: "level5", title: "레벨 5", pose: "findspot", test: s => s.level >= 5 },
+    { id: "challenge", title: "첫 챌린지 완료", pose: "go", test: s => s.challenges >= 1 }
+  ];
+  function bestStreak() {
+    const days = [...checkedDays()].sort(); let best = 0, run = 0, prev = null;
+    days.forEach(k => { const d = new Date(k + "T00:00:00"); run = prev && (d - prev) / 864e5 === 1 ? run + 1 : 1; best = Math.max(best, run); prev = d; });
+    return best;
+  }
+  async function myStats() {
+    const rw = S.profile.rewards || {}, keys = Object.keys(rw);
+    let posts = [], reviews = [];
+    try { [posts, reviews] = await Promise.all([S.store.myPosts(), S.store.myReviews()]); } catch (e) {}
+    const live = posts.filter(p => p.status !== "rejected");
+    return {
+      checkins: keys.filter(k => k.indexOf("checkin:") === 0).length, bestStreak: bestStreak(),
+      votes: keys.filter(k => k.indexOf("vote:") === 0).length, polls: live.filter(p => p.type === "vote").length,
+      combos: live.filter(p => p.type === "combo").length, reviews: reviews.length + live.filter(p => p.type === "review").length,
+      mates: (S.profile.mates || []).length, level: levelOf(myXp()), challenges: keys.filter(k => k.indexOf("challenge:") === 0).length
+    };
+  }
+  let achvBusy = false;
+  async function checkAchievements() {
+    if (!S.profile || achvBusy) return; achvBusy = true;
+    try {
+      const st = await myStats(), have = new Set(S.profile.achv || []);
+      const fresh = ACHV.filter(a => !have.has(a.id) && a.test(st));
+      if (fresh.length) {
+        await savePts({ achv: [...have, ...fresh.map(a => a.id)] });
+        publishProgress();
+        celebrate(fresh[0].pose, "업적 달성", fresh.map(a => a.title).join(", "));
+      }
+    } finally { achvBusy = false; }
+  }
+  function achvGrid(ids, all) {
+    const have = new Set(ids || []);
+    const list = all ? ACHV : ACHV.filter(a => have.has(a.id));
+    if (!list.length) return `<p class="muted tiny">아직 받은 업적이 없어요</p>`;
+    return `<div class="achv-grid">${list.map(a => `<div class="achv ${have.has(a.id) ? "on" : ""}">${mascot(a.pose, 56)}<span>${esc(a.title)}</span></div>`).join("")}</div>`;
+  }
+  /* ---------- 메이트 (단방향 즐겨찾기 친구) ---------- */
+  const mateSet = () => new Set((S.profile && S.profile.mates) || []);
+  async function toggleMate(uid) {
+    const m = mateSet(); const on = !m.has(uid);
+    on ? m.add(uid) : m.delete(uid);
+    await savePts({ mates: [...m] });
+    publishProgress(); if (on) checkAchievements();
+    return on;
   }
   async function grantFree(itemKey) { if (!ownedSet().has(itemKey)) await savePts({ owned: [...ownedSet(), itemKey] }); }
   /* ---------- 연속 출석 ---------- */
@@ -1582,6 +1800,7 @@
     const next = MILESTONES.find(([n]) => n > st.n);
     const shown = st.done ? st.n : st.n;
     return `<section class="streak ${st.done ? "done" : ""}">
+      <a class="sk-level" href="#/achievements">${levelBar(myXp())}</a>
       <div class="sk-main">
         <span class="sk-char">${mascot(st.done ? "excited" : st.n ? "curious" : "sleepy", 60)}${st.done ? FLAME(true) : ""}</span>
         <div class="grow"><b class="sk-n"><span class="num">${shown}</span>일 연속</b>
@@ -1616,7 +1835,9 @@
   async function claimChallenge(c) {
     const rw = S.profile.rewards || {}, key = "challenge:" + c.key;
     if (rw[key]) return false;
-    await savePts({ points: pts() + c.ch.points, rewards: { ...rw, [key]: Date.now() }, owned: [...ownedSet(), c.ch.item], pointLog: [{ label: "이번 주 챌린지", amt: c.ch.points, at: Date.now() }, ...(S.profile.pointLog || [])].slice(0, 30) });
+    const before = levelOf(myXp());
+    await savePts({ points: pts() + c.ch.points, rewards: { ...rw, [key]: Date.now() }, owned: [...ownedSet(), c.ch.item], pointLog: [{ label: "이번 주 챌린지", amt: c.ch.points, at: Date.now() }, ...(S.profile.pointLog || [])].slice(0, 30), ...xpUpd(c.ch.points) });
+    afterGain(before);
     return true;
   }
   function challengeCard(c) {
@@ -1928,11 +2149,15 @@
           <div class="grow"><div class="name-line"><h2>${esc(p.nickname)}</h2>${ageOf(S.pub) ? `<span class="age-chip">${ageOf(S.pub)}살</span>` : ""}</div>
             <div class="tagrow sm">${S.pub && (S.pub.styleTags || []).length ? S.pub.styleTags.map(x => `<span class="tag">${esc(x)}</span>`).join("") : `<span class="muted tiny">추구미를 골라 프로필을 꾸며보세요</span>`}</div></div>
         </div>
+        <a class="me-level" href="#/achievements">${levelBar(myXp())}</a>
         <div class="row gap mt"><a class="btn ghost sm grow" href="#/me/style">프로필 꾸미기</a><a class="btn ghost sm grow" href="#/u/${encodeURIComponent(S.user.uid)}">내 프로필 보기</a></div>
         <a class="link block tiny" href="#/me/edit">닉네임·지역·관심사 수정 (지역은 비공개)</a>
       </section>
       <div class="group me-links">
         <a class="hist" href="#/points">${mascot("money", 34)}<div class="grow"><b>포인트</b></div><b class="num pts-val">${pts().toLocaleString("ko-KR")}P</b>${ic("chev", 18, "chev")}</a>
+        <a class="hist" href="#/achievements">${mascot("excited", 34)}<div class="grow"><b>업적</b></div><b class="num pts-val">${(p.achv || []).length}/${ACHV.length}</b>${ic("chev", 18, "chev")}</a>
+        <a class="hist" href="#/mates">${mascot("friends", 34)}<div class="grow"><b>메이트</b></div><b class="num pts-val">${(p.mates || []).length}명</b>${ic("chev", 18, "chev")}</a>
+        <a class="hist" href="#/league">${mascot("go", 34)}<div class="grow"><b>이번 주 리그</b></div>${ic("chev", 18, "chev")}</a>
         <a class="hist" href="#/saved">${mascot("love", 34)}<div class="grow"><b>저장한 항목</b></div>${ic("chev", 18, "chev")}</a>
       </div>
       ${posts.length || reviews.length || subs.length ? `<div class="stats card me-stats">
